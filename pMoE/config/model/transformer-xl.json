@@ -1,0 +1,7 @@
+{
+    "model_name": "TransformerXL",
+    "n_layer": 24,
+    "n_head": 16,
+    "d_model": 1024,
+    "d_hidden": 4096
+}

@@ -1,0 +1,7 @@
+{
+    "model_name": "t5-xxl",
+    "n_layer": 48,
+    "n_head": 64,
+    "d_model": 4096,
+    "d_hidden": 16384
+}

@@ -1,0 +1,4 @@
+{
+    "dataset": "enwik8",
+    "batch_size": 60
+}

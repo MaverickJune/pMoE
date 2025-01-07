@@ -1,0 +1,11 @@
+envs/
+fairscale/
+moe-distributed-training/
+fastmoe/build/
+fastmoe/fastmoe.egg-info/
+fastmoe/dist/
+tensor_parallel/
+
+pMoE/.vscode/
+pMoE/models/models_weight/
+pMoE/adaptive_embeddings.pt

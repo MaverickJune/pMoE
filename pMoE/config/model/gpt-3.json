@@ -1,0 +1,7 @@
+{
+    "model_name": "gpt-3",
+    "n_layer": 96,
+    "n_head": 96,
+    "d_model": 12288,
+    "d_hidden": 49152
+}

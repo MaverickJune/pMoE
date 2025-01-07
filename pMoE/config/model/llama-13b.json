@@ -1,0 +1,7 @@
+{
+    "model_name": "llama-13b",
+    "n_layer": 40,
+    "n_head": 40,
+    "d_model": 5120,
+    "d_hidden": 13824
+}
