@@ -16,33 +16,33 @@
 
 torch::Tensor _expert_exchange(
         torch::Tensor local_expert_count,
-        long n_expert, long n_workers);
+        long n_expert, long n_workers, size_t idx);
 torch::Tensor _global_scatter(
         torch::Tensor input_buf,
         torch::Tensor local_expert_count,
         torch::Tensor global_expert_count,
-        long batch_size, long n_workers);
+        long batch_size, long n_workers, size_t idx);
 torch::Tensor _global_gather(
         torch::Tensor output_buf,
         torch::Tensor local_expert_count,
         torch::Tensor global_expert_count,
-        long batch_size, long n_workers);
+        long batch_size, long n_workers, size_t idx);
 // shan start //
 torch::Tensor _global_reshape(
         torch::Tensor input_buf,
         torch::Tensor local_expert_count,
         torch::Tensor global_expert_count,
-        long batch_size, long n_workers);
+        long batch_size, long n_workers, size_t idx);
 
 torch::Tensor _expert_gather(
         torch::Tensor local_expert_count,
-        long total_experts, long n_workers);
+        long total_experts, long n_workers, size_t idx);
 
 // shan end //
 #if defined(TORCH_VERSION_MAJOR) && (TORCH_VERSION_MAJOR >= 2)
-void _ensure_nccl(c10d::ProcessGroup& p, torch::Tensor t);
+void _ensure_nccl(c10d::ProcessGroup& p, torch::Tensor t, size_t idx);
 #else
-void _ensure_nccl(c10d::ProcessGroupNCCL& p, torch::Tensor t);
+void _ensure_nccl(c10d::ProcessGroupNCCL& p, torch::Tensor t, size_t idx);
 #endif  // TORCH_VERSION
 
 #endif  // FMOE_USE_NCCL

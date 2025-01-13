@@ -2,12 +2,17 @@
 #include "utils/fmoe_utils.h"
 #include <torch/extension.h>
 
+std::mutex linear_forward_mutex;
+
 torch::Tensor _linear_forward(
         torch::Tensor input_buf,
         torch::Tensor expert_count,
         torch::Tensor weight,
         at::optional<torch::Tensor> bias
         ) {
+    
+    
+    // linear_forward_mutex.lock();
     auto smgr = getCudaStreamManager(input_buf.device().index());
     const auto batch_size = input_buf.size(0);
     const auto num_expert = weight.size(0);
@@ -18,7 +23,7 @@ torch::Tensor _linear_forward(
     printf("[forward] expert=%ld, in_feat (d_model)=%ld, out_feat (d_ffn)=%ld\n",
             num_expert, in_feat, out_feat);
 #endif
-
+    
     torch::Tensor output;
 
     if (bias.has_value()) {
@@ -29,7 +34,7 @@ torch::Tensor _linear_forward(
             .dtype(input_buf.dtype());
         output = torch::empty({batch_size, out_feat}, out_options);
     }
-
+    { std::lock_guard<std::mutex> lock(linear_forward_mutex);
     AT_DISPATCH_FLOATING_TYPES_AND2(at::ScalarType::Half, at::ScalarType::BFloat16,
             input_buf.scalar_type(), "moe_forward_cuda",
             ([&] {
@@ -44,9 +49,11 @@ torch::Tensor _linear_forward(
             num_expert,
             smgr
         );
-    }));
-
-    return output;
+        }));
+    // linear_forward_mutex.unlock();
+    return output;    
+}
+    
 }
 
 

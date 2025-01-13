@@ -10,7 +10,7 @@
 #include "stream_manager.h"
 
 #define SMGR_N_STREAMS 16
-
+#include <nccl.h>
 
 cudaStream_t CudaStreamManager::stream(size_t idx) {
     if (this->use_default) {
@@ -30,6 +30,15 @@ cublasHandle_t CudaStreamManager::handle(size_t idx) {
     return this->handles[idx % SMGR_N_STREAMS];
 }
 
+#ifdef FMOE_USE_NCCL
+ncclComm_t CudaStreamManager::getComm(size_t idx) {
+    // return ncclcomm;
+    return this->ncclcomm[idx % SMGR_N_STREAMS];
+}
+char CudaStreamManager::getncclgood(size_t idx) {
+    return this->ncclgood[idx % SMGR_N_STREAMS];
+}
+#endif
 
 void CudaStreamManager::syncTorch() {
     cudaStreamSynchronize(this->torchStream());
@@ -46,12 +55,13 @@ void CudaStreamManager::sync(int idx) {
 
 void CudaStreamManager::setup(const int device) {
 #ifdef FMOE_USE_NCCL
-    this->ncclgood = 0;
+    this->ncclgood = new char[SMGR_N_STREAMS];
+    this->ncclcomm = new ncclComm_t[SMGR_N_STREAMS];
 #endif
     this->device = device;
     checkCudaErrors(cudaSetDevice(device));
-    streams = new cudaStream_t[SMGR_N_STREAMS];
-    handles = new cublasHandle_t[SMGR_N_STREAMS];
+    this->streams = new cudaStream_t[SMGR_N_STREAMS];
+    this->handles = new cublasHandle_t[SMGR_N_STREAMS];
     for (size_t i = 0; i < SMGR_N_STREAMS; ++i) {
         // SHOULD NOT USE: cudaStreamCreate(...)
         // more details in
@@ -67,9 +77,21 @@ void CudaStreamManager::destroy() {
     for (size_t i = 0; i < SMGR_N_STREAMS; ++i) {
         checkCudaErrors(cudaStreamDestroy(streams[i]));
         checkCudaErrors(cublasDestroy(handles[i]));
+#ifdef FMOE_USE_NCCL
+        // Detroy NCCL
+        if (ncclcomm[i] != nullptr) {
+            ncclCommDestroy(ncclcomm[i]);
+        }
+#endif
     }
+
     delete[] streams;
     delete[] handles;
+#ifdef FMOE_USE_NCCL
+    // NCCL memory delete
+    delete[] ncclgood;
+    delete[] ncclcomm;
+#endif
 }
 
 std::unordered_map<int, CudaStreamManager*> smgrs;

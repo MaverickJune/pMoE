@@ -8,17 +8,19 @@ import torch
 from torch.autograd import Function
 import fmoe_cuda
 from .utils import get_torch_default_comm
-
+import os
+import threading
 
 _moe_group = None
 
+lock = threading.Lock()
 
-def ensure_comm(t, comm):
+def ensure_comm(t, comm, idx):
     if comm is None:
         comm = get_torch_default_comm()
     global _moe_group
     _moe_group = comm
-    fmoe_cuda.ensure_nccl(comm, t)
+    fmoe_cuda.ensure_nccl(comm, t, idx)
 
 
 def get_moe_group():
@@ -49,33 +51,60 @@ def count_by_gate(gate, num_expert, world_size, require_pos=True):
     return pos, local_expert_count, global_expert_count
 
 # done code
-def total_count_by_gate(gate, total_experts, ctx, require_pos=True):
+def total_count_by_gate(gate, total_experts, ctx, idx, require_pos=True):
     with torch.no_grad():
         local_expert_count = torch.zeros(
             total_experts, device=gate.device, dtype=torch.int32
         )
+        current_stream = torch.cuda.current_stream()
+        print(f"Current CUDA Stream: {current_stream}")
+
         fmoe_cuda.expert_count(gate, local_expert_count) # only cuda
         local_expert_count = local_expert_count.long()
-
-        group = ctx.get_group("tp")
+        
         size = ctx.get_size('tp')
         if size > 1:
             global_expert_count = fmoe_cuda.expert_gather(
-                local_expert_count, total_experts, size # nccl needed
+                local_expert_count, total_experts, size, idx # nccl needed
             )
         else:
             global_expert_count = local_expert_count
         if not require_pos:
             pos = None
         else:
+        
             lec_cum = torch.cumsum(local_expert_count, dim=0).int()
+            print(f"[{ctx.get_rank('tp')} {idx}] "
+                  f"gate: {gate.shape}, dtype={gate.dtype}, address=0x{gate.data_ptr():x}\n"
+                  f"lec_cum: {lec_cum.shape}, dtype={lec_cum.dtype}, "
+                  f"device={lec_cum.device}, "
+                  f"memory={lec_cum.element_size() * lec_cum.numel()} bytes, "
+                  f"address=0x{lec_cum.data_ptr():x} "
+                  f"value: {lec_cum} \n"
+                  f"local_expert_count: {local_expert_count} \n"
+                  )
+            
             pos_size = lec_cum[-1].item()
-            pos = torch.empty((pos_size,), device=gate.device, dtype=torch.long)
+            # with lock: 
+            pos = torch.zeros((pos_size,), device=gate.device, dtype=torch.long)
+            
+            print(f"[{ctx.get_rank('tp')} {idx}] "
+                f"pos (before assign_pos): {pos.shape}, dtype={pos.dtype}, value: {pos}, \n"
+                f"device={pos.device}, "
+                f"memory={pos.element_size() * pos.numel()} bytes, "
+                f"address=0x{pos.data_ptr():x}\n")
+            
             fmoe_cuda.assign_pos(lec_cum, gate, pos)
-    return pos, local_expert_count, global_expert_count
+        # print(f"pos: {pos.shape} local count {total_experts}, lec_cum: {lec_cum}, pos size: {pos_size}\n")
+        print(f"[{ctx.get_rank('tp')} {idx}] "
+                f"pos (after assign_pos): {pos.shape}, dtype={pos.dtype}, value: {pos}, \n"
+                f"device={pos.device}, "
+                f"memory={pos.element_size() * pos.numel()} bytes, "
+                f"address=0x{pos.data_ptr():x}\n")
+        return pos, local_expert_count, global_expert_count
 
 # done code
-def prepare_balance_forward(gate, total_experts, ctx):
+def prepare_balance_forward(gate, total_experts, ctx, idx, stream):
     r"""
     Prepare necessary information from gate output for MoE computation.
 
@@ -86,21 +115,24 @@ def prepare_balance_forward(gate, total_experts, ctx):
         world_size: number of workers that hold different experts.
         comm: the communicator of all workers in the expert-parallel group.
     """
-    pos, local_expert_count, global_expert_count = total_count_by_gate(gate, 
-            total_experts, ctx)
+    with torch.cuda.stream(stream[idx]):
+        pos, local_expert_count, global_expert_count = total_count_by_gate(gate, 
+                total_experts, ctx, idx)
     
     
-    with torch.no_grad():
-        fwd_expert_count = global_expert_count.view(ctx.get_size("tp"),
-                total_experts).sum(dim=0) # [E], idx: expert, value: number of tokens per expert
-        fwd_batch_size = int(fwd_expert_count.sum().item()) # scalar, value: total tokens [B = b x k x n]
-    return (
-        pos,
-        local_expert_count.cpu(),
-        global_expert_count.cpu(),
-        fwd_expert_count.cpu(),
-        fwd_batch_size,
-    )
+        with torch.no_grad():
+            fwd_expert_count = global_expert_count.view(ctx.get_size("tp"),
+                    total_experts).sum(dim=0) # [E], idx: expert, value: number of tokens per expert
+            fwd_batch_size = int(fwd_expert_count.sum().item()) # scalar, value: total tokens [B = b x k x n]
+        # if ctx.get_rank("tp") == 0:
+        #     print(f"pos: {pos.shape} local count {total_experts}")
+        return (
+            pos,
+            local_expert_count.cpu(),
+            global_expert_count.cpu(),
+            fwd_expert_count.cpu(),
+            fwd_batch_size,
+        )
 
 def reshape_for_reduce_scatter():
     return
@@ -168,7 +200,9 @@ class MoEReshape(Function):
         global_expert_count,
         fwd_batch_size,
         ctx_manager,
+        idx
     ):
+        print(f"shape: {inp.shape}, type: {type(inp)}")
         local_input_buf = _local_scatter(inp, pos)
         size = ctx_manager.get_size("tp")
         
@@ -179,6 +213,7 @@ class MoEReshape(Function):
                 global_expert_count,
                 fwd_batch_size,
                 size,
+                idx,
             ) # nccl needed
         else:
             global_input_buf = local_input_buf

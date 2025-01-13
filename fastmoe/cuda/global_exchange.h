@@ -1,12 +1,18 @@
 #include "stream_manager.h"
+#include <mutex>
+#include <unistd.h> // For getpid()
+#include <pthread.h> // for tid
+#include <thread>
 
 #ifdef FMOE_USE_NCCL
 
+// std::mutex _reshape_mtx;
 void fmoe_cuda_expert_exchange_impl(
         const long* local_expert_count,
         long* global_expert_count,
         int n_expert, int world_size,
-        CudaStreamManager* smgr);
+        CudaStreamManager* smgr,
+        size_t idx);
 
 // shan
 template<typename scalar_t>
@@ -16,11 +22,16 @@ void fmoe_cuda_global_reshape_impl(
     const long* global_expert_count, // [E x n]
     scalar_t* global_input_buf, // [B x k, h]
     size_t sub_in_feat, size_t total_experts, size_t n_workers, // h, E, n
-    CudaStreamManager* smgr) {
+    CudaStreamManager* smgr,
+    size_t idx) {
+    
+    pid_t pid = getpid();
+    // pthread_t tid = pthread_self();
+    ncclComm_t _ncclcomm = smgr->ncclcomm[idx];
 
-    // fprintf(stderr, "DEBUG: Entering fmoe_cuda_global_reshape_impl\n");
-    // fprintf(stderr, "DEBUG: sub_in_feat = %zu, total_experts = %zu, n_workers = %zu\n",
-    //         sub_in_feat, total_experts, n_workers);
+    fprintf(stderr, "PID: %d, TID: %zu, DEBUG: Entering fmoe_cuda_global_reshape_impl\n", pid, idx);
+    fprintf(stderr, "DEBUG PID: %d : sub_in_feat = %zu, total_experts = %zu, n_workers = %zu\n",
+            pid, sub_in_feat, total_experts, n_workers);
     
     int recv_ptr = 0;
     size_t send_offset = 0;
@@ -42,35 +53,39 @@ void fmoe_cuda_global_reshape_impl(
             int g_idx = i + j * total_experts;
             
             if (local_expert_count[idx]) {
-            // fprintf(stderr, "[DEBUG Rank %ld]: Sending %ld elements to worker %zu\n",
-            //         smgr->device, local_expert_count[idx], j);
+                fprintf(
+                    stderr, "[DEBUG PID: %d Rank %ld]: Sending %ld elements to worker %zu\n",
+                    pid,
+                    smgr->device, 
+                    local_expert_count[idx], 
+                    j);
                 NCCL_SAFE_CALL(ncclSend(
                     local_input_buf + send_offset + expert_ptr[idx] * (sub_in_feat* n_workers),
                     local_expert_count[idx] * sub_in_feat * sizeof(scalar_t),
                     ncclChar,
                     j,
-                    smgr->ncclcomm,
+                    _ncclcomm,
                     smgr->torchStream()));
             }
             
             if (global_expert_count[g_idx]) {
                 // fprintf(stderr, "[DEBUG Rank %ld]: Receiving %ld elements from worker %d\n",
-                //         smgr->device, global_expert_count[g_idx], j);
+                        // smgr->device, global_expert_count[g_idx], j);
                 NCCL_SAFE_CALL(ncclRecv(
                         global_input_buf + recv_ptr * sub_in_feat,
                         global_expert_count[g_idx] * sub_in_feat * sizeof(scalar_t),
                         ncclChar,
                         j,
-                        smgr->ncclcomm,
+                        _ncclcomm,
                         smgr->torchStream()));
                 recv_ptr += global_expert_count[g_idx];
             }
         }
         NCCL_SAFE_CALL(ncclGroupEnd());
-        // fprintf(stderr, "[DEBUG Rank %ld]: Completed communication for expert %zu\n",smgr->device, i);
+        fprintf(stderr, "[DEBUG Rank %ld]: Completed communication for expert %zu\n",smgr->device, i);
     }
     delete [] expert_ptr;
-    // fprintf(stderr, "DEBUG: Exiting fmoe_cuda_global_reshape_impl\n");
+    fprintf(stderr, "DEBUG: Exiting fmoe_cuda_global_reshape_impl\n");
 }
 // shan
 template<typename scalar_t>
@@ -80,7 +95,8 @@ void fmoe_cuda_global_restore_impl(
     const long* global_expert_count,
     scalar_t* local_output_buf,
     size_t out_feat, size_t n_expert, size_t world_size,
-    CudaStreamManager* smgr) {
+    CudaStreamManager* smgr,
+    size_t idx) {
     long send_ptr = 0;
     /* TODO: may save for backward */
     long *expert_ptr = new long[n_expert * world_size];
@@ -99,7 +115,7 @@ void fmoe_cuda_global_restore_impl(
                         global_expert_count[idx] * out_feat * sizeof(scalar_t),
                         ncclChar,
                         j,
-                        smgr->ncclcomm,
+                        smgr->getComm(idx),
                         smgr->torchStream()));
                 send_ptr += global_expert_count[idx];
             }
@@ -109,7 +125,7 @@ void fmoe_cuda_global_restore_impl(
                         local_expert_count[idx] * out_feat * sizeof(scalar_t),
                         ncclChar,
                         j,
-                        smgr->ncclcomm,
+                        smgr->getComm(idx),
                         smgr->torchStream()));
             }
         }
@@ -125,7 +141,8 @@ void fmoe_cuda_global_scatter_impl(
     const long* global_expert_count,
     scalar_t* input_buf,
     size_t in_feat, size_t n_expert, size_t world_size,
-    CudaStreamManager* smgr) {
+    CudaStreamManager* smgr,
+    size_t idx) {
     // assert world_size > 1
     int recv_ptr = 0;
     /* TODO: may save for backward */
@@ -145,7 +162,7 @@ void fmoe_cuda_global_scatter_impl(
                         local_expert_count[idx] * in_feat * sizeof(scalar_t),
                         ncclChar,
                         j,
-                        smgr->ncclcomm,
+                        smgr->getComm(idx),
                         smgr->torchStream()));
             }
             if (global_expert_count[idx]) {
@@ -154,7 +171,7 @@ void fmoe_cuda_global_scatter_impl(
                         global_expert_count[idx] * in_feat * sizeof(scalar_t),
                         ncclChar,
                         j,
-                        smgr->ncclcomm,
+                        smgr->getComm(idx),
                         smgr->torchStream()));
                 recv_ptr += global_expert_count[idx];
             }
@@ -172,7 +189,8 @@ void fmoe_cuda_global_gather_impl(
     const long* global_expert_count,
     scalar_t* local_output_buf,
     size_t out_feat, size_t n_expert, size_t world_size,
-    CudaStreamManager* smgr) {
+    CudaStreamManager* smgr,
+    size_t idx) {
     long send_ptr = 0;
     /* TODO: may save for backward */
     long *expert_ptr = new long[n_expert * world_size];
@@ -191,7 +209,7 @@ void fmoe_cuda_global_gather_impl(
                         global_expert_count[idx] * out_feat * sizeof(scalar_t),
                         ncclChar,
                         j,
-                        smgr->ncclcomm,
+                        smgr->getComm(idx),
                         smgr->torchStream()));
                 send_ptr += global_expert_count[idx];
             }
@@ -201,7 +219,7 @@ void fmoe_cuda_global_gather_impl(
                         local_expert_count[idx] * out_feat * sizeof(scalar_t),
                         ncclChar,
                         j,
-                        smgr->ncclcomm,
+                        smgr->getComm(idx),
                         smgr->torchStream()));
             }
         }

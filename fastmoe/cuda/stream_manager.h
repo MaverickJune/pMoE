@@ -23,8 +23,8 @@ public:
     cudaStream_t* streams;
     bool use_default;
 #ifdef FMOE_USE_NCCL
-    char ncclgood;
-    ncclComm_t ncclcomm;
+    char* ncclgood;
+    ncclComm_t* ncclcomm;
 #endif
 
 public:
@@ -40,7 +40,10 @@ public:
     cudaStream_t torchStream();
     cudaStream_t stream(size_t=0);
     cublasHandle_t handle(size_t=0);
-
+#ifdef FMOE_USE_NCCL
+    ncclComm_t getComm(size_t idx);  // NCCL comm return
+    char getncclgood(size_t idx);  // NCCL comm return
+#endif
     ~CudaStreamManager() {
         this->destroy();
     }

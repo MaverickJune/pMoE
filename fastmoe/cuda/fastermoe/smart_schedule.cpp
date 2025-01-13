@@ -57,7 +57,7 @@ void _reduce_grad(
             NCCL_SAFE_CALL(ncclReduce(buf, buf, expert_size,
                         dtype,
                         ncclSum, root,
-                        smgr->ncclcomm, smgr->stream(0)));
+                        smgr->ncclcomm[0], smgr->stream(0)));
         })
     );
 }
@@ -87,7 +87,7 @@ std::vector<torch::Tensor> _smart_sch_forward(
 
     auto smgr = getCudaStreamManager(input_buf.device().index());
     int rank;
-    NCCL_SAFE_CALL(ncclCommUserRank(smgr->ncclcomm, &rank));
+    NCCL_SAFE_CALL(ncclCommUserRank(smgr->ncclcomm[0], &rank));
 
     const auto num_expert = local_expert_count.size(0) / n_workers;
     const auto d_model = input_buf.size(1);
@@ -148,7 +148,7 @@ torch::Tensor _smart_sch_backward(
     const auto num_expert = local_expert_count.size(0) / n_workers;
     auto smgr = getCudaStreamManager(grad_out.device().index());
     int rank;
-    ncclCommUserRank(smgr->ncclcomm, &rank);
+    ncclCommUserRank(smgr->ncclcomm[0], &rank);
     const auto d_model = grad_out.size(1);
     auto global_grad_out = grad_out.new_zeros({global_batch_size, d_model});
     auto global_grad_in = grad_out.new_zeros({global_batch_size, d_model});

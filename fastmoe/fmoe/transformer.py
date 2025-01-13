@@ -115,36 +115,37 @@ class _pExpert(nn.Module):
 
             # Create output tensor for this rank
             output_tensor = torch.empty((bkn, chunk_size), dtype=tensor.dtype, device=tensor.device)
-            with nvtx.annotate("FFN sub comm", color="green"):
+            # if ctx.get_rank("tp") == 0:
+            #     print(f"shape of input tensor is {tensor.shape}")
+            #     print(f"shape of input chunks is {input_chunks[0].shape}")
+            #     print(f"shape of output tensor is {output_tensor.shape}")
+            # with nvtx.annotate("FFN sub comm", color="green"):
             # Perform reduce-scatter
-                dist.reduce_scatter(output_tensor, input_chunks, op=dist.ReduceOp.SUM, group=group)
+            # work = dist.reduce_scatter(output_tensor, input_chunks, op=dist.ReduceOp.SUM, group=group, async_op=True)
+            work = dist.reduce_scatter(output_tensor, input_chunks, op=dist.ReduceOp.SUM, group=group, async_op=True)
 
-            return output_tensor
+            return output_tensor, work
         
         if dim == 1:
-            outp = tree.map_structure(lambda t: reduce_scatter_column(t, dim, self.ctx), x)
+            outp, work = tree.map_structure(lambda t: reduce_scatter_column(t, dim, self.ctx), x)
         
-        return x
+        return outp, work # [B x 704]
     
     def forward(self, inp, fwd_expert_count):
         r"""
         First expand input to 4h (the hidden size is variable, but is called h4
         for convenience). Then perform activation. Finally shirink back to h.
         """
-        if self.ctx.get_rank("tp") == 0:
-            print("FFN inp shape: ", inp.shape)
-        with nvtx.annotate("FFN Layer 1", color="green"):
-            x = self._comm_forward(inp, self.htoh4, fwd_expert_count, dim=1)
-        if self.ctx.get_rank("tp") == 0:
-            print("FFN 1 inp shape: ", inp.shape)
-        with nvtx.annotate("FFN Layer 2", color="green"):    
-            x = self.activation(x) * self.w3(inp, fwd_expert_count)
-        if self.ctx.get_rank("tp") == 0:
-            print("FFN 2 shape: ", inp.shape)
-        with nvtx.annotate("FFN Layer 3", color="green"):
-            x = self.h4toh(x, fwd_expert_count)
-        if self.ctx.get_rank("tp") == 0:
-            print("FFM 3 shape: ", inp.shape)
+        # [B x 2048] -> [B x 5632]
+        # print(f"shape of input is {inp.shape}")
+        x, work = self._comm_forward(inp, self.htoh4, fwd_expert_count, dim=1) 
+        # print(f"shape 1 of x is {x.shape}")
+        # [B x 704] [B x 704] -> 
+        work.wait()
+        x = self.activation(x) # * self.w3(inp, fwd_expert_count) # [B x 704] x [B x 5632]
+        # print(f"shape 2 of x is {x.shape}")
+        
+        x = self.h4toh(x, fwd_expert_count)
         return x
 
 
@@ -162,6 +163,8 @@ class pMoETransformerMLP(pMoE):
         d_hidden=4096,
         activation=torch.nn.GELU(),
         layer_num=0,
+        pipeline=1,
+        executor="none",
         ctx="none",
         **kwargs
     ):
@@ -170,7 +173,7 @@ class pMoETransformerMLP(pMoE):
             return _pExpert(total_experts, d_model, d_hidden, activation, ctx)
         
         expert = fused_sub_experts
-        super().__init__(total_experts=total_experts, d_model=d_model, ctx = ctx, expert=expert, layer_num=layer_num, **kwargs)
+        super().__init__(total_experts=total_experts, d_model=d_model, ctx = ctx, expert=expert, layer_num=layer_num, pipeline=pipeline, executor = executor,**kwargs)
         self.mark_parallel_comm(self.ctx.get_group('dp'))
 
     def forward(self, inp: torch.Tensor):

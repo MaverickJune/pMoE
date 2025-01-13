@@ -159,7 +159,7 @@ void fmoe_cuda_fused_forward_impl(
                         local_expert_count[idx_send] * !stored_models[idx_send], rank_send,
                         global_input_buf + global_ptr[gidx_recv] * d_model,
                         global_expert_count[idx_recv] * !stored_models[idx_self], rank_recv,
-                        d_model, smgr->stream(num_expert), smgr->ncclcomm);
+                        d_model, smgr->stream(num_expert), smgr->ncclcomm[0]);
             }
             NCCL_SAFE_CALL(ncclGroupEnd());
         }
@@ -181,7 +181,7 @@ void fmoe_cuda_fused_forward_impl(
             }
             NCCL_SAFE_CALL(ncclBcast((void*)params[si].data_ptr<scalar_t>(),
                         expert_size * sizeof(scalar_t), ncclChar,
-                        i / num_expert, smgr->ncclcomm, smgr->stream(num_expert)));
+                        i / num_expert, smgr->ncclcomm[0], smgr->stream(num_expert)));
             cudaEventCreate(evt_shadow + si);
             cudaEventRecord(evt_shadow[si], smgr->stream(num_expert));
             ++si;
@@ -236,7 +236,7 @@ void fmoe_cuda_fused_forward_impl(
                         global_expert_count[idx_send] * !stored_models[idx_self], rank_send,
                         output_buf + local_ptr[idx_recv] * d_model,
                         local_expert_count[idx_recv] * !stored_models[idx_recv], rank_recv,
-                        d_model, smgr->stream(num_expert), smgr->ncclcomm);
+                        d_model, smgr->stream(num_expert), smgr->ncclcomm[0]);
             }
             NCCL_SAFE_CALL(ncclGroupEnd());
         }
@@ -318,7 +318,7 @@ void fmoe_cuda_fused_backward_impl(
                         local_expert_count[idx_send] * !stored_models[idx_send], rank_send,
                         global_grad_out + global_ptr[gidx_recv] * d_model,
                         global_expert_count[idx_recv] * !stored_models[idx_self], rank_recv,
-                        d_model, smgr->stream(num_expert), smgr->ncclcomm);
+                        d_model, smgr->stream(num_expert), smgr->ncclcomm[0]);
             }
             NCCL_SAFE_CALL(ncclGroupEnd());
         }
@@ -389,7 +389,7 @@ void fmoe_cuda_fused_backward_impl(
                         global_expert_count[idx_send] * !stored_models[idx_self], rank_send,
                         grad_in + local_ptr[idx_recv] * d_model,
                         local_expert_count[idx_recv] * !stored_models[idx_recv], rank_recv,
-                        d_model, smgr->stream(num_expert), smgr->ncclcomm);
+                        d_model, smgr->stream(num_expert), smgr->ncclcomm[0]);
             }
             NCCL_SAFE_CALL(ncclGroupEnd());
         }

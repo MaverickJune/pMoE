@@ -1,12 +1,17 @@
 #include "local_exchange.cuh"
 #include "utils/fmoe_utils.h"
 #include <torch/extension.h>
+#include <mutex>
+
+std::mutex assign_pos_mtx;
 
 void _assign_pos(
     torch::Tensor cum_count,
     torch::Tensor gate,
     torch::Tensor pos) {
+    // std::lock_guard<std::mutex> lock(assign_pos_mtx); 
     auto smgr = getCudaStreamManager(cum_count.device().index());
+    fprintf(stderr, "[DEBUG device index  %d]: Entering Assign Pos\n", cum_count.device().index());
     auto gate_shp = gate.sizes();
     size_t batch_size = gate_shp[0], topk = 1;
     if (gate_shp.size() == 2) {
