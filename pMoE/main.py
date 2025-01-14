@@ -303,7 +303,7 @@ def baseline(args, mesh_shape, mesh_dims, dataloader, iteration=10):
         
         ffn_elapsed_times=[]
         # cuda.cudaProfilerStart()
-        GATE_DATA_SAVE_PATH = "/home/wjbang/workspace/pMoE/pMoE/gate_data"
+        GATE_DATA_SAVE_PATH = "/shared/workspace/pMoE_origin/pMoE/pMoE/gate_data"
         with torch.no_grad():
             i = 0
             # with profile(activities=activities, record_shapes=True, with_modules=True, with_flops=True, profile_memory=True) as prof:

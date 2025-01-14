@@ -3,9 +3,9 @@
 conda_path="/shared/conda/etc/profile.d/conda.sh"
 conda_env="shan_cuda12.1"
 
-# nodes=("nxc-node0" "nxc-node1" "nxc-node2" "nxc-node3")
+nodes=("nxc-node0" "nxc-node1" "nxc-node2" "nxc-node3")
 # nodes=("nxc-node0" "nxc-node1")
-nodes=("gpu-1")
+# nodes=("gpu-1")
 
 log_dir=logs
 config_dir="/shared/workspace/shan/pMoE/config"
@@ -30,7 +30,7 @@ export HF_DATASETS_VERBOSITY=warning
 # Activate the conda environment
 # source $conda_path activate $conda_env
 
-nproc_per_node=4 # GPUs
+nproc_per_node=2 # GPUs
 nnodes=${#nodes[@]}  # # nodes
 hostname=$(hostname)
 
