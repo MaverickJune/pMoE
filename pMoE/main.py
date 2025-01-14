@@ -77,21 +77,21 @@ def parse(parameters):
     # Parse arguments
     args, unknown = parser.parse_known_args()
 
-    # Parse model configuration file
-    with open(args.model_config, 'r') as model_file:
-        model_config_args = json.load(model_file)
+    # # Parse model configuration file
+    # with open(args.model_config, 'r') as model_file:
+    #     model_config_args = json.load(model_file)
 
-    # Parse data configuration file
-    with open(args.data_config, 'r') as data_file:
-        data_config_args = json.load(data_file)
+    # # Parse data configuration file
+    # with open(args.data_config, 'r') as data_file:
+    #     data_config_args = json.load(data_file)
 
-    # Combine configurations (optional: prioritize model configs over data configs if keys overlap)
-    combined_config_args = {**data_config_args, **model_config_args}
+    # # Combine configurations (optional: prioritize model configs over data configs if keys overlap)
+    # combined_config_args = {**data_config_args, **model_config_args}
 
-    # Add arguments from the configuration files to the parser with proper help descriptions
-    for key, value in combined_config_args.items():
-        help_text = argument_help.get(key, f'No description provided for {key}')
-        parser.add_argument(f'--{key}', default=value, help=help_text)
+    # # Add arguments from the configuration files to the parser with proper help descriptions
+    # for key, value in combined_config_args.items():
+    #     help_text = argument_help.get(key, f'No description provided for {key}')
+    #     parser.add_argument(f'--{key}', default=value, help=help_text)
 
     # Final parsed arguments
     final_args = parser.parse_args()
@@ -186,27 +186,31 @@ def main(args, mesh_shape, mesh_dims, dataloader, iteration=10):
             i = 0
             # with profile(activities=activities, record_shapes=True, with_modules=True, with_flops=True, profile_memory=True) as prof:
             # @nvtx.annotate("pMoE")
-            with nvtx.annotate("pMoE", color="green"):
-                for d in dataloader:
-                    if i >= iteration:
-                        break
-                    
-                    # embedding generate
-                    _tokens = d["input_ids"].to(gpu_idx)
-                    attention_mask = d["attention_mask"].to(gpu_idx)
-                    # embs = embedding(_tokens)
-                    # if rank ==0:
-                    #     print(f"tokens {_tokens.shape}")
-                    # record only ffn
-                    torch.cuda.synchronize()
-                    start_event.record()
-                    output = model(_tokens)
-                    end_event.record()
-                    torch.cuda.synchronize()
-                    
-                    # save and iterate
-                    ffn_elapsed_times.append(start_event.elapsed_time(end_event))
-                    i += 1
+            # with nvtx.annotate("pMoE", color="green"):
+            for d in dataloader:
+                if i % 10 == 0:
+                    if rank == 0:
+                        print(f"processing {i}th data")
+                
+                if iteration != -1 and i >= iteration:
+                    break
+                
+                # embedding generate
+                _tokens = d["input_ids"].to(gpu_idx)
+                attention_mask = d["attention_mask"].to(gpu_idx)
+                # embs = embedding(_tokens)
+                # if rank ==0:
+                #     print(f"tokens {_tokens.shape}")
+                # record only ffn
+                torch.cuda.synchronize()
+                start_event.record()
+                output = model(_tokens)
+                end_event.record()
+                torch.cuda.synchronize()
+                
+                # save and iterate
+                ffn_elapsed_times.append(start_event.elapsed_time(end_event))
+                i += 1
         
         # cuda.cudaProfilerStop()
         # time eval
@@ -240,6 +244,9 @@ def baseline(args, mesh_shape, mesh_dims, dataloader, iteration=10):
     # setup GPUs
     gpu_idx = rank % torch.cuda.device_count()
     torch.cuda.set_device(gpu_idx)
+    
+    # Variable to save gate data
+    gate_topk_and_latency = []
     
     assert gpu_idx == local_rank, "gpu_idx should be equal to local_rank"
     
@@ -296,31 +303,53 @@ def baseline(args, mesh_shape, mesh_dims, dataloader, iteration=10):
         
         ffn_elapsed_times=[]
         # cuda.cudaProfilerStart()
+        GATE_DATA_SAVE_PATH = "/home/wjbang/workspace/pMoE/pMoE/gate_data"
         with torch.no_grad():
             i = 0
             # with profile(activities=activities, record_shapes=True, with_modules=True, with_flops=True, profile_memory=True) as prof:
-            with nvtx.annotate("FMoE", color="red"):
-                for d in dataloader:
-                    if i >= iteration:
-                        break
-                    
-                    # embedding generate
-                    _tokens = d["input_ids"].to(gpu_idx)
-                    attention_mask = d["attention_mask"].to(gpu_idx)
-                    if rank==0:
-                        print(f"tokens {_tokens.shape}")
-                    # embs = embedding(_tokens)
-                    
-                    # record only ffn
-                    torch.cuda.synchronize()
-                    start_event.record()
-                    output = model(_tokens)
-                    end_event.record()
-                    torch.cuda.synchronize()
-                    
-                    # save and iterate
-                    ffn_elapsed_times.append(start_event.elapsed_time(end_event))
-                    i += 1
+            # with nvtx.annotate("FMoE", color="red"):
+            for d in dataloader:
+                if i % 10 == 0:
+                    if rank == 0:
+                        print(f"processing {i}th data")
+                        
+                if iteration != -1 and i >= iteration:
+                    break
+                
+                # embedding generate
+                _tokens = d["input_ids"].to(gpu_idx)
+                attention_mask = d["attention_mask"].to(gpu_idx)
+                # if rank==0:
+                #     print(f"tokens {_tokens.shape}")
+                # embs = embedding(_tokens)
+                
+                # record only ffn
+                torch.cuda.synchronize()
+                start_event.record()
+                output = model(_tokens)
+                end_event.record()
+                torch.cuda.synchronize()
+                
+                # save and iterate
+                ffn_elapsed_times.append(start_event.elapsed_time(end_event))
+                
+                # save gate data
+                if rank == 0:
+                    save_dict = {}
+                    save_dict[f"iter_{i}"] = i
+                    for idx in range(len(model.model.layers)):
+                        gate_data = model.model.layers[idx].block_sparse_moe.save_gate_data
+                        save_dict[f"layer_{idx}_gate"] = gate_data
+                    save_dict[f"latency"] = ffn_elapsed_times[-1]
+                    gate_topk_and_latency.append(save_dict)
+                
+                # Increase iter count
+                i += 1
+                
+        # Save gate data to .pt file
+        if rank == 0:
+            final_save_path = os.path.join(GATE_DATA_SAVE_PATH, f"{args.d_name}_{iteration}.pt")
+            torch.save(gate_topk_and_latency, final_save_path)
         
         # cuda.cudaProfilerStop()
         # time eval
@@ -355,7 +384,8 @@ if __name__ == "__main__":
     mesh_dims = ("dp", "tp")  
     # Define Dataset and DataLoader
     # Set up the distributed DataLoader
-    d_name ="wikitext-2" # wikitext-103, enwik8, wikitext-2
+    d_name ="enwik8" # wikitext-103, enwik8, wikitext-2
+    args.d_name = d_name
     
     dataset = pMOEdataset(dataset_name=d_name, model_name="eastwind/tinymix-8x1b-chat")
     dataset.prune_dataset(1024) # prune items that are longer than 1024 tokens
@@ -372,16 +402,16 @@ if __name__ == "__main__":
     # emb = dataset.emb
     # embedding = torch.load("adaptive_embeddings.pt") # 1024 tokenizer + embedding t
 
-    pmoe_time = main(args, mesh_shape=mesh_shape, mesh_dims=mesh_dims, dataloader=dataloader, iteration=1)
-    fmoe_time = baseline(args, mesh_shape=mesh_shape, mesh_dims=mesh_dims, dataloader=dataloader, iteration=1)
-    _pmoe = torch.tensor(pmoe_time) 
+    # pmoe_time = main(args, mesh_shape=mesh_shape, mesh_dims=mesh_dims, dataloader=dataloader, iteration=10000)
+    fmoe_time = baseline(args, mesh_shape=mesh_shape, mesh_dims=mesh_dims, dataloader=dataloader, iteration=10000)
+    # _pmoe = torch.tensor(pmoe_time) 
     _fmoe = torch.tensor(fmoe_time)
-    comp = _pmoe / _fmoe
+    # comp = _pmoe / _fmoe
     
-    if rank == 0:
-        print(f"pmoe vs. fmoe {torch.mean(comp)}")
-        print(f"pmoe vs. fmoe value {comp}")
-        print(f"pmoe time {torch.mean(_pmoe)}")
+    # if rank == 0:
+    #     print(f"pmoe vs. fmoe {torch.mean(comp)}")
+    #     print(f"pmoe vs. fmoe value {comp}")
+    #     print(f"pmoe time {torch.mean(_pmoe)}")
     
     # # mp.spawn(main, args=(world_size, mesh_shape, mesh_dims, input_data), nprocs=world_size, join=True)
     # # mp.spawn(baseline, args=(world_size, mesh_shape, mesh_dims, input_data), nprocs=world_size, join=True)

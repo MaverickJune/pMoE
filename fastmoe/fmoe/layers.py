@@ -258,12 +258,15 @@ class FMoE(nn.Module):
         gate_hook=None,
         mask=None,
         mask_dict=None,
-        gate_bias=True,
+        gate_bias=False,
     ):
         super().__init__()
         self.num_expert = num_expert
         self.d_model = d_model
         self.world_size = world_size
+        
+        # For saving top-k values of the gate
+        self.save_gate_data = None
 
         self.slice_group = slice_group
         if mp_group is not None:
@@ -367,6 +370,8 @@ class FMoE(nn.Module):
             moe_inp = tree.map_structure(slice_func, moe_inp)
 
         gate_top_k_idx, gate_score = self.gate(moe_inp)
+        # Save gate top-k value
+        self.save_gate_data = gate_top_k_idx
 
         if self.gate_hook is not None:
             self.gate_hook(gate_top_k_idx, gate_score, None)

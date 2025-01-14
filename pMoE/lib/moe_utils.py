@@ -84,7 +84,7 @@ def clean():
     gc.collect()
 
 @torch.no_grad()
-def tinymix_wrapper(model, moe_name, moe_config: Dict, ctx, gpu_rank, gpu_idx, weight_path="/shared/workspace/shan/pMoE/models/models_weight/tinymix-8x1b-chat"):
+def tinymix_wrapper(model, moe_name, moe_config: Dict, ctx, gpu_rank, gpu_idx, weight_path="/home/wjbang/workspace/pMoE/pMoE/models/models_weight/tinymix-8x1b-chat"):
     if moe_name not in MOE_DICT.keys():
         raise ValueError(f"Invalid MoE name. Choose from {MOE_DICT.keys()}")
     

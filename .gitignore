@@ -9,3 +9,6 @@ tensor_parallel/
 pMoE/.vscode/
 pMoE/models/models_weight/
 pMoE/adaptive_embeddings.pt
+fastmoe/build.sh
+
+pMoE/gate_data/

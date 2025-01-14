@@ -1,9 +1,14 @@
 #!/bin/bash
 
 # Set paths for include and libraries
-export CPLUS_INCLUDE_PATH=/shared/conda_envs/shan_cuda12.1/include:$CPLUS_INCLUDE_PATH
-export C_INCLUDE_PATH=/shared/conda_envs/shan_cuda12.1/include:$C_INCLUDE_PATH
-export LD_LIBRARY_PATH=/shared/conda_envs/shan_cuda12.1/lib:$LD_LIBRARY_PATH
+export CPLUS_INCLUDE_PATH=/home/wjbang/anaconda3/envs/pMoE/include:$CPLUS_INCLUDE_PATH
+export C_INCLUDE_PATH=/home/wjbang/anaconda3/envs/pMoE/include:$C_INCLUDE_PATH
+export LD_LIBRARY_PATH=/home/wjbang/anaconda3/envs/pMoE/lib:$LD_LIBRARY_PATH
+export CPLUS_INCLUDE_PATH=/home/wjbang/anaconda3/envs/pMoE/lib/python3.11/site-packages/nvidia/nccl/include:/home/wjbang/anaconda3/envs/pMoE/lib/python3.11/site-packages/torch/include/torch/csrc/cuda:$CPLUS_INCLUDE_PATH
+export C_INCLUDE_PATH=/home/wjbang/anaconda3/envs/pMoE/lib/python3.11/site-packages/nvidia/nccl/include:/home/wjbang/anaconda3/envs/pMoE/lib/python3.11/site-packages/torch/include/torch/csrc/cuda:$C_INCLUDE_PATH
+export LD_LIBRARY_PATH=/home/wjbang/anaconda3/envs/pMoE/lib/python3.11/site-packages/nvidia/nccl/lib/:/home/wjbang/anaconda3/envs/pMoE/lib:$LD_LIBRARY_PATH
+
+
 
 # Clean Python build artifacts and cache
 echo "Deleting build artifacts and cache..."

@@ -18,7 +18,7 @@ class NaiveGate(BaseGate):
     `Gate` module.
     """
 
-    def __init__(self, d_model, num_expert, world_size, top_k=2, gate_bias=True):
+    def __init__(self, d_model, num_expert, world_size, top_k=2, gate_bias=False):
         super().__init__(num_expert, world_size)
         self.gate = nn.Linear(d_model, self.tot_expert, bias = gate_bias)
         self.top_k = top_k

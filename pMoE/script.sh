@@ -3,9 +3,9 @@
 conda_path="/shared/conda/etc/profile.d/conda.sh"
 conda_env="shan_cuda12.1"
 
-nodes=("nxc-node0" "nxc-node1" "nxc-node2" "nxc-node3")
+# nodes=("nxc-node0" "nxc-node1" "nxc-node2" "nxc-node3")
 # nodes=("nxc-node0" "nxc-node1")
-# nodes=("nxc-node0")
+nodes=("gpu-1")
 
 log_dir=logs
 config_dir="/shared/workspace/shan/pMoE/config"
@@ -30,12 +30,17 @@ export HF_DATASETS_VERBOSITY=warning
 # Activate the conda environment
 # source $conda_path activate $conda_env
 
-nproc_per_node=2 # GPUs
+nproc_per_node=4 # GPUs
 nnodes=${#nodes[@]}  # # nodes
 hostname=$(hostname)
 
 model="transformer-xl"
 dataset="enwiki8"
+
+LOG=log
+SAVE_NAME="pMoE_test"
+
+mkdir -p $LOG
 
 # Determine node_rank dynamically based on hostname
 node_rank=-1
@@ -55,12 +60,14 @@ fi
 
 echo "Running on node: $hostname with node_rank: $node_rank"
 
-NCCL_SOCKET_IFNAME=ens4f0np0 python -m torch.distributed.run \
+# NCCL_SOCKET_IFNAME=ens4f0np0 
+
+python -m torch.distributed.run \
   --nproc_per_node=$nproc_per_node \
   --nnodes=$nnodes \
   --node_rank=$node_rank \
-  --master_addr=10.10.10.10 \
+  --master_addr=127.0.0.1 \
   --master_port=12357 \
   main.py \
   --model_config $model_config/$model.json \
-  --data_config $data_config/$dataset.json
+  --data_config $data_config/$dataset.json 2>&1 | tee -a $LOG/$SAVE_NAME.txt
