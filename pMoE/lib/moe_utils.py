@@ -190,7 +190,56 @@ def tinymix_wrapper(model, moe_name, moe_config: Dict, ctx, gpu_rank, gpu_idx, w
             raise ValueError(f"Invalid MoE name. Choose from {MOE_DICT.keys()}")
         
     return model
+
+@torch.no_grad()
+def deepseek_wrapper(model, moe_name, moe_config: Dict, ctx, gpu_rank, gpu_idx, weight_path="/home/wjbang/workspace/pMoE/pMoE/models/models_weight/deepseek-moe-16b-chat"):
+    if moe_name not in MOE_DICT.keys():
+        raise ValueError(f"Invalid MoE name. Choose from {MOE_DICT.keys()}")
+    
+    # Get the configuration
+    total_experts = moe_config.get("total_experts", 16)
+    d_model = moe_config.get("d_model", 1024)
+    d_hidden = moe_config.get("d_hidden", 4096)
+    top_k = moe_config.get("top_k", 2)
+    world_size = moe_config.get("world_size", None)
+    moe_group = moe_config.get("moe_group", None)
+    
+    # Convert ffn -> fMoE
+    for i in range(1, len(model.model.layers)):
+        if moe_name != 'fMoE':
+            raise ValueError(f"Deepseek model only supports fMoE. Choose fMoE")
         
+        if gpu_rank == 0:
+            print(f"Wrapping layer {i} / {len(model.model.layers)} from mlp to {moe_name}")
+        model.model.layers[i].mlp = FMoETransformerMLP(num_expert=total_experts, d_model=d_model, d_hidden=d_hidden, top_k=top_k, world_size=world_size, moe_group=moe_group, is_deepseek=True).to(torch.bfloat16)
+        
+        # Copy gate weight
+        gate_weight = torch.load(f"{weight_path}/layer_{i}_gate.pt").to(gpu_idx)
+        model.model.layers[i].mlp.gate.gate.weight.copy_(gate_weight)
+        del gate
+        clean()
+        
+        # Copy expert weights
+        num_expert_per_gpu = total_experts // world_size
+        expert_start_idx = num_expert_per_gpu * gpu_rank
+        
+        for idx in range(expert_start_idx, expert_start_idx + num_expert_per_gpu):
+            up_weight = torch.load(f"{weight_path}/layer_{i}_expert_{idx}_up.pt")
+            down_weight = torch.load(f"{weight_path}/layer_{i}_expert_{idx}_down.pt")
+            gate_weight = torch.load(f"{weight_path}/layer_{i}_expert_{idx}_gate.pt")
+            
+            model.model.layers[i].mlp.experts[idx].up_proj.weight.copy_(up_weight)
+            model.model.layers[i].mlp.experts[idx].down_proj.weight.copy_(down_weight)
+            model.model.layers[i].mlp.experts[idx].gate_proj.weight.copy_(gate_weight)
+            
+            del up_weight, down_weight, gate_weight
+            clean()
+            
+        # Copy shared expert weights
+        shared_expert_weight = torch.load(f"{weight_path}/layer_{i}_shared_experts.pt") # state_dict
+        model.model.layers[i].mlp.shared_experts.load_state_dict(shared_expert_weight)
+        
+    return model
  
 # from models.tinymix_8x_1b_chat import MixtralForCausalLM
 from transformers.models.mixtral.modeling_mixtral import MixtralForCausalLM
@@ -207,6 +256,13 @@ def load_tinymix(gpu_idx):
     model_size = num_params / 1024 / 1024 / 1024
     
     # print(f"Model size: {model_size} GB")
+    
+    return model
+
+@torch.no_grad()
+def load_deepseek(gpu_idx):
+    model_name = "deepseek-ai/deepseek-moe-16b-base"
+    model = AutoModelForCausalLM.from_pretrained(model_name, device_map=None, torch_dtype=torch.bfloat16).to(gpu_idx)
     
     return model
     

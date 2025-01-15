@@ -33,6 +33,44 @@ class _Expert(nn.Module):
         x = self.h4toh(x, fwd_expert_count)
         return x
 
+class _DeepseekExpert(nn.Module):
+    def __init__(self, num_expert, d_model, d_hidden, activation, rank=0):
+        super().__init__()
+        
+        self.hidden_size = d_model
+        self.intermediate_size = d_hidden
+        
+        self.gate_proj = FMoELinear(num_expert, self.hidden_size, self.intermediate_size, bias=False, rank=rank)
+        self.up_proj = FMoELinear(num_expert, self.hidden_size, self.intermediate_size, bias=False, rank=rank)
+        self.down_proj = FMoELinear(num_expert, self.hidden_size, self.intermediate_size, bias=False, rank=rank)
+        
+        self.act_fn = nn.SiLU() # Decided to hard-code the activation function
+
+    def forward(self, inp, fwd_expert_count):
+        x = self.up_proj(inp, fwd_expert_count)
+        gate_val = self.gate_proj(inp, fwd_expert_count)
+        x = self.act_fn(gate_val) * x
+        x = self.down_proj(x, fwd_expert_count)
+        
+        return x
+        
+class Custom_DeepseekMLP(nn.Module):
+    def __init__(self, hidden_size, intermediate_size):
+        super().__init__()
+        
+        self.hidden_size = hidden_size
+        self.intermediate_size = intermediate_size 
+        
+        self.gate_proj = nn.Linear(self.hidden_size, self.intermediate_size, bias=False)
+        self.up_proj = nn.Linear(self.hidden_size, self.intermediate_size, bias=False)
+        self.down_proj = nn.Linear(self.intermediate_size, self.hidden_size, bias=False)
+        
+        self.act_fn = nn.SiLU() # Decided to hard-code the activation function
+        
+    def forward(self, x):
+        down_proj = self.down_proj(self.act_fn(self.gate_proj(x)) * self.up_proj(x))
+        return down_proj
+
 
 class FMoETransformerMLP(FMoE):
     r"""
@@ -46,15 +84,32 @@ class FMoETransformerMLP(FMoE):
         num_expert=32,
         d_model=1024,
         d_hidden=4096,
-        activation=torch.nn.GELU(),
+        activation=torch.nn.SiLU(),
         expert_dp_comm="none",
         expert_rank=0,
+        is_deepseek=False,
         **kwargs
     ):
         def one_expert(d_model):
             return _Expert(1, d_model, d_hidden, activation, rank=0)
         
-        expert = one_expert
+        def one_deepseek_expert(d_model):
+            return _DeepseekExpert(1, d_model, d_hidden, activation, rank=0)
+        
+        # Logics related to deepseek
+        self.is_deepseek = is_deepseek
+        self.shared_experts = None
+        if is_deepseek:
+            self.shared_experts = None # TODO: FIXIT
+        
+        if is_deepseek:
+            expert = one_deepseek_expert
+        else:
+            expert = one_expert
+            
+        if is_deepseek:
+            self.shared_experts = Custom_DeepseekMLP(d_model, 2 * d_hidden) # config.n_shared_experts = 2
+            
         super().__init__(num_expert=num_expert, d_model=d_model, expert=expert, **kwargs)
         self.mark_parallel_comm(expert_dp_comm)
 
@@ -66,6 +121,12 @@ class FMoETransformerMLP(FMoE):
         original_shape = inp.shape
         inp = inp.reshape(-1, self.d_model)
         output, idx = super().forward(inp)
+        
+        if self.is_deepseek:
+            output = output.reshape(original_shape)
+            output = output + self.shared_experts(inp.reshape(original_shape))
+            return output # No idx for deepseek
+        
         return output.reshape(original_shape), idx
 
 class _pExpert(nn.Module):

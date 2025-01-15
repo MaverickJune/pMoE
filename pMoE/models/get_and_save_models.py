@@ -8,7 +8,7 @@ import glog
 @torch.no_grad()
 def get_model(model_name, save_model_info=False):
     # device_map = infer_auto_device_map(model_name)
-    model = AutoModelForCausalLM.from_pretrained(model_name, device_map='auto', torch_dtype=torch.bfloat16)
+    model = AutoModelForCausalLM.from_pretrained(model_name, device_map='auto', torch_dtype=torch.bfloat16, trust_remote_code=True)
     print(model.hf_device_map)
     model_save_path = os.path.join("./models_info", model_name.split("/")[-1])
     os.makedirs(model_save_path, exist_ok=True)
@@ -27,7 +27,7 @@ def get_model(model_name, save_model_info=False):
 
 @torch.no_grad()
 def save_model(model, model_name):
-    MODEL_LIST = ["ibm-granite/granite-3.1-1b-a400m-instruct", "eastwind/tinymix-8x1b-chat"]
+    MODEL_LIST = ["ibm-granite/granite-3.1-1b-a400m-instruct", "eastwind/tinymix-8x1b-chat", "deepseek-ai/deepseek-moe-16b-chat"]
     if model_name not in MODEL_LIST:
         raise ValueError(f"Model name {model_name} not in the list of available models: {MODEL_LIST}")
     
@@ -71,12 +71,29 @@ def save_model(model, model_name):
                 
     elif model_name == "ibm-granite/granite-3.1-1b-a400m-instruct":
         raise NotImplementedError("Model not implemented yet")
+    
+    elif model_name == "deepseek-ai/deepseek-moe-16b-chat":
+        for idx in range(1, len(model.model.layers)): # Don't need to store the zeroth layer
+            glog.info(f"saving layer {idx}")
+            layer = model.model.layers[idx]
+            
+            for expert_idx, expert in enumerate(layer.mlp.experts):
+                torch.save(expert.gate_proj.weight, os.path.join(model_weight_save_path, f"layer_{idx}_expert_{expert_idx}_gate_proj.pt"))
+                torch.save(expert.up_proj.weight, os.path.join(model_weight_save_path, f"layer_{idx}_expert_{expert_idx}_up_proj.pt"))
+                torch.save(expert.down_proj.weight, os.path.join(model_weight_save_path, f"layer_{idx}_expert_{expert_idx}_down_proj.pt"))
+                
+            torch.save(layer.mlp.gate.weight, os.path.join(model_weight_save_path, f"layer_{idx}_gate.pt"))
+            torch.save(layer.mlp.shared_experts.state_dict(), os.path.join(model_weight_save_path, f"layer_{idx}_shared_experts.pt"))
+            
+            glog.info(f"Layer {idx} saved")
+    else:
+        raise ValueError(f"Model name {model_name} not in the list of available models: {MODEL_LIST}")
         
 
 if __name__ == '__main__':
     # model_name = 'ibm-granite/granite-3.1-1b-a400m-instruct'
     # model_name = "Qwen/Qwen1.5-MoE-A2.7B-Chat" # Currently Unavailable
-    model_name = "eastwind/tinymix-8x1b-chat"
+    model_name = "deepseek-ai/deepseek-moe-16b-chat"
     model = get_model(model_name, save_model_info=True)
     save_model(model, model_name)
     

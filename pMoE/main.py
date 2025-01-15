@@ -29,6 +29,7 @@ warnings.filterwarnings("ignore", category=FutureWarning, module="torch")
 # torch.set_num_interop_threads(8)  # Adjust interop threads if required
 
 import nvtx
+from datetime import datetime
 
 def cleanup():
     """
@@ -322,7 +323,6 @@ def baseline(args, mesh_shape, mesh_dims, dataloader, iteration=10):
                 # if rank==0:
                 #     print(f"tokens {_tokens.shape}")
                 # embs = embedding(_tokens)
-                
                 # record only ffn
                 torch.cuda.synchronize()
                 start_event.record()
@@ -348,7 +348,8 @@ def baseline(args, mesh_shape, mesh_dims, dataloader, iteration=10):
                 
         # Save gate data to .pt file
         if rank == 0:
-            final_save_path = os.path.join(GATE_DATA_SAVE_PATH, f"{args.d_name}_{iteration}.pt")
+            timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+            final_save_path = os.path.join(GATE_DATA_SAVE_PATH, f"{args.d_name}_{iteration}_{timestamp}.pt")
             torch.save(gate_topk_and_latency, final_save_path)
         
         # cuda.cudaProfilerStop()
