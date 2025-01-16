@@ -39,7 +39,7 @@ ds_logging.set_verbosity_warning()
 
 class pMOEdataset(Dataset):
     def __init__(self, dataset_name, model_name):
-        MODEL_LIST = ["transfo-xl/transfo-xl-wt103", "mistralai/Mistral-7B-v0.1", "meta-llama/Llama-3.1-70B-Instruct", "eastwind/tinymix-8x1b-chat"]
+        MODEL_LIST = ["transfo-xl/transfo-xl-wt103", "mistralai/Mistral-7B-v0.1", "meta-llama/Llama-3.1-70B-Instruct", "eastwind/tinymix-8x1b-chat", "deepseek-ai/deepseek-moe-16b-base"]
         assert model_name in MODEL_LIST, f"Model name should be one of {MODEL_LIST}"
         
         DATASET_LIST = ["wikitext-2", "wikitext-103", "enwik8", "squad"]
@@ -95,6 +95,13 @@ class pMOEdataset(Dataset):
                 self.tokenizer.add_special_tokens({"pad_token": pad})
                 self.tokenizer.padding_side = "left"
         elif(self.model_name=="eastwind/tinymix-8x1b-chat"):
+            self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+            if self.tokenizer.pad_token is None:
+                pad = "<|pad|>"
+                self.tokenizer.add_special_tokens({"pad_token": pad})
+                self.tokenizer.padding_side = "left"
+                
+        elif(self.model_name=="deepseek-ai/deepseek-moe-16b-base"):
             self.tokenizer = AutoTokenizer.from_pretrained(model_name)
             if self.tokenizer.pad_token is None:
                 pad = "<|pad|>"

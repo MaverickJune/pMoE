@@ -216,7 +216,7 @@ def deepseek_wrapper(model, moe_name, moe_config: Dict, ctx, gpu_rank, gpu_idx, 
         # Copy gate weight
         gate_weight = torch.load(f"{weight_path}/layer_{i}_gate.pt").to(gpu_idx)
         model.model.layers[i].mlp.gate.gate.weight.copy_(gate_weight)
-        del gate
+        del gate_weight
         clean()
         
         # Copy expert weights
@@ -224,9 +224,9 @@ def deepseek_wrapper(model, moe_name, moe_config: Dict, ctx, gpu_rank, gpu_idx, 
         expert_start_idx = num_expert_per_gpu * gpu_rank
         
         for idx in range(expert_start_idx, expert_start_idx + num_expert_per_gpu):
-            up_weight = torch.load(f"{weight_path}/layer_{i}_expert_{idx}_up.pt")
-            down_weight = torch.load(f"{weight_path}/layer_{i}_expert_{idx}_down.pt")
-            gate_weight = torch.load(f"{weight_path}/layer_{i}_expert_{idx}_gate.pt")
+            up_weight = torch.load(f"{weight_path}/layer_{i}_expert_{idx}_up_proj.pt")
+            down_weight = torch.load(f"{weight_path}/layer_{i}_expert_{idx}_down_proj.pt")
+            gate_weight = torch.load(f"{weight_path}/layer_{i}_expert_{idx}_gate_proj.pt")
             
             model.model.layers[i].mlp.experts[idx].up_proj.weight.copy_(up_weight)
             model.model.layers[i].mlp.experts[idx].down_proj.weight.copy_(down_weight)
@@ -262,7 +262,7 @@ def load_tinymix(gpu_idx):
 @torch.no_grad()
 def load_deepseek(gpu_idx):
     model_name = "deepseek-ai/deepseek-moe-16b-base"
-    model = AutoModelForCausalLM.from_pretrained(model_name, device_map=None, torch_dtype=torch.bfloat16).to(gpu_idx)
+    model = AutoModelForCausalLM.from_pretrained(model_name, device_map=None, torch_dtype=torch.bfloat16, trust_remote_code=True).to(gpu_idx)
     
     return model
     

@@ -42,7 +42,7 @@ class _DeepseekExpert(nn.Module):
         
         self.gate_proj = FMoELinear(num_expert, self.hidden_size, self.intermediate_size, bias=False, rank=rank)
         self.up_proj = FMoELinear(num_expert, self.hidden_size, self.intermediate_size, bias=False, rank=rank)
-        self.down_proj = FMoELinear(num_expert, self.hidden_size, self.intermediate_size, bias=False, rank=rank)
+        self.down_proj = FMoELinear(num_expert, self.intermediate_size, self.hidden_size, bias=False, rank=rank)
         
         self.act_fn = nn.SiLU() # Decided to hard-code the activation function
 
@@ -107,10 +107,11 @@ class FMoETransformerMLP(FMoE):
         else:
             expert = one_expert
             
+        super().__init__(num_expert=num_expert, d_model=d_model, expert=expert, **kwargs)
+            
         if is_deepseek:
             self.shared_experts = Custom_DeepseekMLP(d_model, 2 * d_hidden) # config.n_shared_experts = 2
             
-        super().__init__(num_expert=num_expert, d_model=d_model, expert=expert, **kwargs)
         self.mark_parallel_comm(expert_dp_comm)
 
     def forward(self, inp: torch.Tensor):

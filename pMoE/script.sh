@@ -30,7 +30,7 @@ export HF_DATASETS_VERBOSITY=warning
 # Activate the conda environment
 # source $conda_path activate $conda_env
 
-nproc_per_node=4 # GPUs
+nproc_per_node=2 # GPUs
 nnodes=${#nodes[@]}  # # nodes
 hostname=$(hostname)
 
@@ -61,7 +61,7 @@ fi
 echo "Running on node: $hostname with node_rank: $node_rank"
 
 # NCCL_SOCKET_IFNAME=ens4f0np0 
-
+export CUDA_VISIBLE_DEVICES=1,2
 python -m torch.distributed.run \
   --nproc_per_node=$nproc_per_node \
   --nnodes=$nnodes \

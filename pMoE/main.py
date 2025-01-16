@@ -11,7 +11,7 @@ from lib.utils import pMOEdataset, ContextManager, generate_dummy_tokens, collat
 from torch.utils.data import DataLoader
 from torch.utils.data.distributed import DistributedSampler
 from fmoe.transformer import pMoE, pMoETransformerMLP, FMoETransformerMLP, FMoE
-from lib.moe_utils import llama_wrapper, get_model_from_hf, txl_wrapper, tinymix_wrapper, load_tinymix 
+from lib.moe_utils import llama_wrapper, get_model_from_hf, txl_wrapper, tinymix_wrapper, load_tinymix, deepseek_wrapper, load_deepseek
 import argparse
 import json
 import os
@@ -273,13 +273,15 @@ def baseline(args, mesh_shape, mesh_dims, dataloader, iteration=10):
         group = ctx.get_group('tp')
         gpu_rank = ctx.get_rank('tp') # node 0 gpu 0 -> o node 1 gpu 0 -> 2
         
-        num_experts = 8 // world_size # the number of total experts
+        num_experts = 64 // world_size # the number of total experts
         d_model = 2048  # the embedding size
-        d_hidden = 5632 # the hidden dimension size
+        d_hidden = 1408 # the hidden dimension size
         
         # Define MoE Model
-        model = load_tinymix(gpu_idx)
-        model = tinymix_wrapper(model, "fMoE", {"total_experts": num_experts, "d_model": 2048, "d_hidden": 5632, "top_k": 2, "world_size": world_size, "moe_group": group}, ctx, gpu_rank, gpu_idx).to(gpu_idx)
+        # model = load_tinymix(gpu_idx)
+        # model = tinymix_wrapper(model, "fMoE", {"total_experts": num_experts, "d_model": 2048, "d_hidden": 5632, "top_k": 2, "world_size": world_size, "moe_group": group}, ctx, gpu_rank, gpu_idx).to(gpu_idx)
+        model = load_deepseek(gpu_idx)
+        model = deepseek_wrapper(model, "fMoE", {"total_experts": num_experts, "d_model": 2048, "d_hidden": 1408, "top_k": 2, "world_size": world_size, "moe_group": group}, ctx, gpu_rank, gpu_idx).to(gpu_idx)
         model.eval()
         
         # model = llama_wrapper(_model, "pMoE", {"total_experts": num_experts, "d_model": 8192, "d_hidden": 28672, "top_k": 2}, ctx, gpu_idx)
@@ -337,8 +339,8 @@ def baseline(args, mesh_shape, mesh_dims, dataloader, iteration=10):
                 if rank == 0:
                     save_dict = {}
                     save_dict[f"iter_{i}"] = i
-                    for idx in range(len(model.model.layers)):
-                        gate_data = model.model.layers[idx].block_sparse_moe.save_gate_data
+                    for idx in range(1, len(model.model.layers)):
+                        gate_data = model.model.layers[idx].mlp.save_gate_data
                         save_dict[f"layer_{idx}_gate"] = gate_data
                     save_dict[f"latency"] = ffn_elapsed_times[-1]
                     gate_topk_and_latency.append(save_dict)
@@ -385,10 +387,10 @@ if __name__ == "__main__":
     mesh_dims = ("dp", "tp")  
     # Define Dataset and DataLoader
     # Set up the distributed DataLoader
-    d_name ="enwik8" # wikitext-103, enwik8, wikitext-2
+    d_name ="squad" # wikitext-103, enwik8, wikitext-2
     args.d_name = d_name
     
-    dataset = pMOEdataset(dataset_name=d_name, model_name="eastwind/tinymix-8x1b-chat")
+    dataset = pMOEdataset(dataset_name=d_name, model_name="deepseek-ai/deepseek-moe-16b-base")
     dataset.prune_dataset(1024) # prune items that are longer than 1024 tokens
     
     sampler = DistributedSampler(
@@ -404,7 +406,7 @@ if __name__ == "__main__":
     # embedding = torch.load("adaptive_embeddings.pt") # 1024 tokenizer + embedding t
 
     # pmoe_time = main(args, mesh_shape=mesh_shape, mesh_dims=mesh_dims, dataloader=dataloader, iteration=10000)
-    fmoe_time = baseline(args, mesh_shape=mesh_shape, mesh_dims=mesh_dims, dataloader=dataloader, iteration=10000)
+    fmoe_time = baseline(args, mesh_shape=mesh_shape, mesh_dims=mesh_dims, dataloader=dataloader, iteration=1000)
     # _pmoe = torch.tensor(pmoe_time) 
     _fmoe = torch.tensor(fmoe_time)
     # comp = _pmoe / _fmoe
