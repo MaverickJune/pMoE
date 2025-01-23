@@ -50,7 +50,7 @@ def txl_wrapper(model, moe_name, moe_config: Dict, ctx, gpu_idx):
     return model
 
 @torch.no_grad()
-def llama_wrapper(model, moe_name, moe_config: Dict, ctx, gpu_idx):
+def llama_wrapper(model, moe_name, moe_config: Dict, ctx, gpu_rank, gpu_idx, gate='pshave', imbalance_level=0.125):
     if moe_name not in MOE_DICT.keys():
         raise ValueError(f"Invalid MoE name. Choose from {MOE_DICT.keys()}")
     
@@ -69,8 +69,8 @@ def llama_wrapper(model, moe_name, moe_config: Dict, ctx, gpu_idx):
             model.model.layers[i].mlp = pMoETransformerMLP(total_experts, d_model, d_hidden, top_k=top_k, ctx=ctx)
         else: # fMoE
             # num_expert=num_experts, d_model=args.d_model, d_hidden=args.d_hidden, top_k=top_k, world_size=world_size, moe_group=group
-            model.model.layers[i].mlp = FMoETransformerMLP(num_expert=total_experts, d_model=d_model, d_hidden=d_hidden, top_k=top_k, world_size=world_size, moe_group=moe_group)
-        
+            model.model.layers[i].mlp = FMoETransformerMLP(num_expert=total_experts, d_model=d_model, d_hidden=d_hidden, top_k=top_k, world_size=world_size, moe_group=moe_group, gate=gate, imbalance_level=imbalance_level, is_llama=True).to(torch.bfloat16).to(gpu_idx)
+
     # wrapped_model = model.to(gpu_idx)
     # wrapped_model.eval()
     
@@ -267,7 +267,7 @@ def load_deepseek(gpu_idx):
     return model
     
     
-def get_model_from_hf(model_name, partial=0.4):
+def get_model_from_hf(model_name, partial=0.4, gpu_idx=-1, llama_dict=None):
     if model_name not in MODEL_DICT.keys():
         raise ValueError(f"Unsupported model name. Choose from {MODEL_DICT.keys()}")
     
@@ -283,8 +283,13 @@ def get_model_from_hf(model_name, partial=0.4):
         config.num_hidden_layers = int(config.num_hidden_layers * partial)
     if hasattr(config, 'n_layer'):
         config.n_layer = int(config.n_layer * partial)
+        
+    if llama_dict is not None:
+        print(f"Configuring the model with {llama_dict}")
+        config.hidden_size = int(llama_dict['d_model'])
+        config.intermediate_size = int(llama_dict['d_hidden'])
     
     # Get the model
-    model = MODEL_DICT[model_name](config)
+    model = MODEL_DICT[model_name](config).to(torch.bfloat16).to(gpu_idx)
     
     return model

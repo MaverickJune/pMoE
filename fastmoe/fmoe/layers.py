@@ -9,7 +9,7 @@ import torch.nn as nn
 from .functions import prepare_forward, ensure_comm, prepare_balance_forward
 from .functions import MOEScatter, MOEGather, MoEReshape
 from .functions import AllGather, Slice
-from .gates import NaiveGate
+from .gates import NaiveGate, PshaveGate
 
 from .fastermoe.config import switch_from_env
 
@@ -252,8 +252,9 @@ class FMoE(nn.Module):
         mp_group=None,  # being deprecated
         slice_group=None,
         moe_group=None,
-        top_k=2,
-        gate=NaiveGate,
+        top_k=1,
+        gate="naive",
+        imbalance_level=0.125,
         expert=None,
         gate_hook=None,
         mask=None,
@@ -289,16 +290,27 @@ class FMoE(nn.Module):
             self.experts_fused = False
         else:
             self.experts_fused = True
-
+            
+        # Handling gate
+        GATE_DICT = {
+            "naive": NaiveGate,
+            "pshave": PshaveGate,
+        }
+        
+        if gate not in GATE_DICT.keys():
+            raise ValueError(f"Gate {gate} is not supported.")
+        gate = GATE_DICT[gate]
+        
         if issubclass(gate, NaiveGate):
             self.gate = gate(d_model, num_expert, world_size, top_k, gate_bias=gate_bias)
+        elif issubclass(gate, PshaveGate):
+            self.gate = gate(d_model, num_expert, world_size, top_k, imbalance_level=imbalance_level)
         else:
             self.gate = gate(d_model, num_expert, world_size, top_k)
         self.gate_hook = gate_hook
         self.mask = mask
         self.mask_dict = mask_dict
         self.moe_group = moe_group
-
     def expert_fn(self, inp, fwd_expert_count):
         r"""
         The default expert function which either calls the experts as a whole

@@ -4736,3 +4736,375 @@ FMOE: [Rank 1] Average Elapsed Time: 255.25199487304687ms
 
 FMOE: [Rank 0] Average Elapsed Time: 255.23793000793458ms 
 
+[rank1]: Traceback (most recent call last):
+[rank1]:   File "/home/wjbang/anaconda3/envs/shan_cuda12.1/lib/python3.12/site-packages/huggingface_hub/utils/_http.py", line 406, in hf_raise_for_status
+[rank1]:     response.raise_for_status()
+[rank1]:   File "/home/wjbang/anaconda3/envs/shan_cuda12.1/lib/python3.12/site-packages/requests/models.py", line 1024, in raise_for_status
+[rank1]:     raise HTTPError(http_error_msg, response=self)
+[rank1]: requests.exceptions.HTTPError: 401 Client Error: Unauthorized for url: https://huggingface.co/meta-llama/Llama-3.1-70B-Instruct/resolve/main/config.json
+
+[rank1]: The above exception was the direct cause of the following exception:
+
+[rank1]: Traceback (most recent call last):
+[rank1]:   File "/home/wjbang/anaconda3/envs/shan_cuda12.1/lib/python3.12/site-packages/transformers/utils/hub.py", line 403, in cached_file
+[rank1]:     resolved_file = hf_hub_download(
+[rank1]:                     ^^^^^^^^^^^^^^^^
+[rank1]:   File "/home/wjbang/anaconda3/envs/shan_cuda12.1/lib/python3.12/site-packages/huggingface_hub/utils/_validators.py", line 114, in _inner_fn
+[rank1]:     return fn(*args, **kwargs)
+[rank1]:            ^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/home/wjbang/anaconda3/envs/shan_cuda12.1/lib/python3.12/site-packages/huggingface_hub/file_download.py", line 860, in hf_hub_download
+[rank1]:     return _hf_hub_download_to_cache_dir(
+[rank1]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/home/wjbang/anaconda3/envs/shan_cuda12.1/lib/python3.12/site-packages/huggingface_hub/file_download.py", line 967, in _hf_hub_download_to_cache_dir
+[rank1]:     _raise_on_head_call_error(head_call_error, force_download, local_files_only)
+[rank1]:   File "/home/wjbang/anaconda3/envs/shan_cuda12.1/lib/python3.12/site-packages/huggingface_hub/file_download.py", line 1482, in _raise_on_head_call_error
+[rank1]:     raise head_call_error
+[rank1]:   File "/home/wjbang/anaconda3/envs/shan_cuda12.1/lib/python3.12/site-packages/huggingface_hub/file_download.py", line 1374, in _get_metadata_or_catch_error
+[rank1]:     metadata = get_hf_file_metadata(
+[rank1]:                ^^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/home/wjbang/anaconda3/envs/shan_cuda12.1/lib/python3.12/site-packages/huggingface_hub/utils/_validators.py", line 114, in _inner_fn
+[rank1]:     return fn(*args, **kwargs)
+[rank1]:            ^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/home/wjbang/anaconda3/envs/shan_cuda12.1/lib/python3.12/site-packages/huggingface_hub/file_download.py", line 1294, in get_hf_file_metadata
+[rank1]:     r = _request_wrapper(
+[rank1]:         ^^^^^^^^^^^^^^^^^
+[rank1]:   File "/home/wjbang/anaconda3/envs/shan_cuda12.1/lib/python3.12/site-packages/huggingface_hub/file_download.py", line 278, in _request_wrapper
+[rank1]:     response = _request_wrapper(
+[rank1]:                ^^^^^^^^^^^^^^^^^
+[rank1]:   File "/home/wjbang/anaconda3/envs/shan_cuda12.1/lib/python3.12/site-packages/huggingface_hub/file_download.py", line 302, in _request_wrapper
+[rank1]:     hf_raise_for_status(response)
+[rank1]:   File "/home/wjbang/anaconda3/envs/shan_cuda12.1/lib/python3.12/site-packages/huggingface_hub/utils/_http.py", line 423, in hf_raise_for_status
+[rank1]:     raise _format(GatedRepoError, message, response) from e
+[rank1]: huggingface_hub.errors.GatedRepoError: 401 Client Error. (Request ID: Root=1-6791a8e9-22f480e3387c49d235a9d33f;32265f9c-4e50-4370-ac9b-5d344f8b4a45)
+
+[rank1]: Cannot access gated repo for url https://huggingface.co/meta-llama/Llama-3.1-70B-Instruct/resolve/main/config.json.
+[rank1]: Access to model meta-llama/Llama-3.1-70B-Instruct is restricted. You must have access to it and be authenticated to access it. Please log in.
+
+[rank1]: The above exception was the direct cause of the following exception:
+
+[rank1]: Traceback (most recent call last):
+[rank1]:   File "/data/home/wjbang/workspace/pMoE/pMoE/main.py", line 400, in <module>
+[rank1]:     dataset = pMOEdataset(dataset_name=d_name, model_name="meta-llama/Llama-3.1-70B-Instruct")
+[rank1]:               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/data/home/wjbang/workspace/pMoE/pMoE/lib/utils.py", line 92, in __init__
+[rank1]:     self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+[rank1]:                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/home/wjbang/anaconda3/envs/shan_cuda12.1/lib/python3.12/site-packages/transformers/models/auto/tokenization_auto.py", line 878, in from_pretrained
+[rank1]:     config = AutoConfig.from_pretrained(
+[rank1]:              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/home/wjbang/anaconda3/envs/shan_cuda12.1/lib/python3.12/site-packages/transformers/models/auto/configuration_auto.py", line 1021, in from_pretrained
+[rank1]:     config_dict, unused_kwargs = PretrainedConfig.get_config_dict(pretrained_model_name_or_path, **kwargs)
+[rank1]:                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/home/wjbang/anaconda3/envs/shan_cuda12.1/lib/python3.12/site-packages/transformers/configuration_utils.py", line 590, in get_config_dict
+[rank1]:     config_dict, kwargs = cls._get_config_dict(pretrained_model_name_or_path, **kwargs)
+[rank1]:                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/home/wjbang/anaconda3/envs/shan_cuda12.1/lib/python3.12/site-packages/transformers/configuration_utils.py", line 649, in _get_config_dict
+[rank1]:     resolved_config_file = cached_file(
+[rank1]:                            ^^^^^^^^^^^^
+[rank1]:   File "/home/wjbang/anaconda3/envs/shan_cuda12.1/lib/python3.12/site-packages/transformers/utils/hub.py", line 421, in cached_file
+[rank1]:     raise EnvironmentError(
+[rank1]: OSError: You are trying to access a gated repo.
+[rank1]: Make sure to have access to it at https://huggingface.co/meta-llama/Llama-3.1-70B-Instruct.
+[rank1]: 401 Client Error. (Request ID: Root=1-6791a8e9-22f480e3387c49d235a9d33f;32265f9c-4e50-4370-ac9b-5d344f8b4a45)
+
+[rank1]: Cannot access gated repo for url https://huggingface.co/meta-llama/Llama-3.1-70B-Instruct/resolve/main/config.json.
+[rank1]: Access to model meta-llama/Llama-3.1-70B-Instruct is restricted. You must have access to it and be authenticated to access it. Please log in.
+[rank0]: Traceback (most recent call last):
+[rank0]:   File "/home/wjbang/anaconda3/envs/shan_cuda12.1/lib/python3.12/site-packages/huggingface_hub/utils/_http.py", line 406, in hf_raise_for_status
+[rank0]:     response.raise_for_status()
+[rank0]:   File "/home/wjbang/anaconda3/envs/shan_cuda12.1/lib/python3.12/site-packages/requests/models.py", line 1024, in raise_for_status
+[rank0]:     raise HTTPError(http_error_msg, response=self)
+[rank0]: requests.exceptions.HTTPError: 401 Client Error: Unauthorized for url: https://huggingface.co/meta-llama/Llama-3.1-70B-Instruct/resolve/main/config.json
+
+[rank0]: The above exception was the direct cause of the following exception:
+
+[rank0]: Traceback (most recent call last):
+[rank0]:   File "/home/wjbang/anaconda3/envs/shan_cuda12.1/lib/python3.12/site-packages/transformers/utils/hub.py", line 403, in cached_file
+[rank0]:     resolved_file = hf_hub_download(
+[rank0]:                     ^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/wjbang/anaconda3/envs/shan_cuda12.1/lib/python3.12/site-packages/huggingface_hub/utils/_validators.py", line 114, in _inner_fn
+[rank0]:     return fn(*args, **kwargs)
+[rank0]:            ^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/wjbang/anaconda3/envs/shan_cuda12.1/lib/python3.12/site-packages/huggingface_hub/file_download.py", line 860, in hf_hub_download
+[rank0]:     return _hf_hub_download_to_cache_dir(
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/wjbang/anaconda3/envs/shan_cuda12.1/lib/python3.12/site-packages/huggingface_hub/file_download.py", line 967, in _hf_hub_download_to_cache_dir
+[rank0]:     _raise_on_head_call_error(head_call_error, force_download, local_files_only)
+[rank0]:   File "/home/wjbang/anaconda3/envs/shan_cuda12.1/lib/python3.12/site-packages/huggingface_hub/file_download.py", line 1482, in _raise_on_head_call_error
+[rank0]:     raise head_call_error
+[rank0]:   File "/home/wjbang/anaconda3/envs/shan_cuda12.1/lib/python3.12/site-packages/huggingface_hub/file_download.py", line 1374, in _get_metadata_or_catch_error
+[rank0]:     metadata = get_hf_file_metadata(
+[rank0]:                ^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/wjbang/anaconda3/envs/shan_cuda12.1/lib/python3.12/site-packages/huggingface_hub/utils/_validators.py", line 114, in _inner_fn
+[rank0]:     return fn(*args, **kwargs)
+[rank0]:            ^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/wjbang/anaconda3/envs/shan_cuda12.1/lib/python3.12/site-packages/huggingface_hub/file_download.py", line 1294, in get_hf_file_metadata
+[rank0]:     r = _request_wrapper(
+[rank0]:         ^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/wjbang/anaconda3/envs/shan_cuda12.1/lib/python3.12/site-packages/huggingface_hub/file_download.py", line 278, in _request_wrapper
+[rank0]:     response = _request_wrapper(
+[rank0]:                ^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/wjbang/anaconda3/envs/shan_cuda12.1/lib/python3.12/site-packages/huggingface_hub/file_download.py", line 302, in _request_wrapper
+[rank0]:     hf_raise_for_status(response)
+[rank0]:   File "/home/wjbang/anaconda3/envs/shan_cuda12.1/lib/python3.12/site-packages/huggingface_hub/utils/_http.py", line 423, in hf_raise_for_status
+[rank0]:     raise _format(GatedRepoError, message, response) from e
+[rank0]: huggingface_hub.errors.GatedRepoError: 401 Client Error. (Request ID: Root=1-6791a8e9-0fd9e8737a78b0a25e4fdfdd;e764110b-fbe0-4959-9240-e3623a2fbf0d)
+
+[rank0]: Cannot access gated repo for url https://huggingface.co/meta-llama/Llama-3.1-70B-Instruct/resolve/main/config.json.
+[rank0]: Access to model meta-llama/Llama-3.1-70B-Instruct is restricted. You must have access to it and be authenticated to access it. Please log in.
+
+[rank0]: The above exception was the direct cause of the following exception:
+
+[rank0]: Traceback (most recent call last):
+[rank0]:   File "/data/home/wjbang/workspace/pMoE/pMoE/main.py", line 400, in <module>
+[rank0]:     dataset = pMOEdataset(dataset_name=d_name, model_name="meta-llama/Llama-3.1-70B-Instruct")
+[rank0]:               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/data/home/wjbang/workspace/pMoE/pMoE/lib/utils.py", line 92, in __init__
+[rank0]:     self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+[rank0]:                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/wjbang/anaconda3/envs/shan_cuda12.1/lib/python3.12/site-packages/transformers/models/auto/tokenization_auto.py", line 878, in from_pretrained
+[rank0]:     config = AutoConfig.from_pretrained(
+[rank0]:              ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/wjbang/anaconda3/envs/shan_cuda12.1/lib/python3.12/site-packages/transformers/models/auto/configuration_auto.py", line 1021, in from_pretrained
+[rank0]:     config_dict, unused_kwargs = PretrainedConfig.get_config_dict(pretrained_model_name_or_path, **kwargs)
+[rank0]:                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/wjbang/anaconda3/envs/shan_cuda12.1/lib/python3.12/site-packages/transformers/configuration_utils.py", line 590, in get_config_dict
+[rank0]:     config_dict, kwargs = cls._get_config_dict(pretrained_model_name_or_path, **kwargs)
+[rank0]:                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/wjbang/anaconda3/envs/shan_cuda12.1/lib/python3.12/site-packages/transformers/configuration_utils.py", line 649, in _get_config_dict
+[rank0]:     resolved_config_file = cached_file(
+[rank0]:                            ^^^^^^^^^^^^
+[rank0]:   File "/home/wjbang/anaconda3/envs/shan_cuda12.1/lib/python3.12/site-packages/transformers/utils/hub.py", line 421, in cached_file
+[rank0]:     raise EnvironmentError(
+[rank0]: OSError: You are trying to access a gated repo.
+[rank0]: Make sure to have access to it at https://huggingface.co/meta-llama/Llama-3.1-70B-Instruct.
+[rank0]: 401 Client Error. (Request ID: Root=1-6791a8e9-0fd9e8737a78b0a25e4fdfdd;e764110b-fbe0-4959-9240-e3623a2fbf0d)
+
+[rank0]: Cannot access gated repo for url https://huggingface.co/meta-llama/Llama-3.1-70B-Instruct/resolve/main/config.json.
+[rank0]: Access to model meta-llama/Llama-3.1-70B-Instruct is restricted. You must have access to it and be authenticated to access it. Please log in.
+[rank0]:[W123 11:26:50.011152964 ProcessGroupNCCL.cpp:1168] Warning: WARNING: process group has NOT been destroyed before we destruct ProcessGroupNCCL. On normal program exit, the application should call destroy_process_group to ensure that any pending NCCL operations have finished in this process. In rare cases this process can exit before this point and block the progress of another member of the process group. This constraint has always been present,  but this warning has only been added since PyTorch 2.4 (function operator())
+W0123 11:26:51.431000 140541800232768 torch/distributed/elastic/multiprocessing/api.py:858] Sending process 3286868 closing signal SIGTERM
+E0123 11:26:51.545000 140541800232768 torch/distributed/elastic/multiprocessing/api.py:833] failed (exitcode: 1) local_rank: 0 (pid: 3286867) of binary: /home/wjbang/anaconda3/envs/shan_cuda12.1/bin/python
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/home/wjbang/anaconda3/envs/shan_cuda12.1/lib/python3.12/site-packages/torch/distributed/run.py", line 905, in <module>
+    main()
+  File "/home/wjbang/anaconda3/envs/shan_cuda12.1/lib/python3.12/site-packages/torch/distributed/elastic/multiprocessing/errors/__init__.py", line 348, in wrapper
+    return f(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^
+  File "/home/wjbang/anaconda3/envs/shan_cuda12.1/lib/python3.12/site-packages/torch/distributed/run.py", line 901, in main
+    run(args)
+  File "/home/wjbang/anaconda3/envs/shan_cuda12.1/lib/python3.12/site-packages/torch/distributed/run.py", line 892, in run
+    elastic_launch(
+  File "/home/wjbang/anaconda3/envs/shan_cuda12.1/lib/python3.12/site-packages/torch/distributed/launcher/api.py", line 133, in __call__
+    return launch_agent(self._config, self._entrypoint, list(args))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/wjbang/anaconda3/envs/shan_cuda12.1/lib/python3.12/site-packages/torch/distributed/launcher/api.py", line 264, in launch_agent
+    raise ChildFailedError(
+torch.distributed.elastic.multiprocessing.errors.ChildFailedError: 
+============================================================
+main.py FAILED
+------------------------------------------------------------
+Failures:
+  <NO_OTHER_FAILURES>
+------------------------------------------------------------
+Root Cause (first observed failure):
+[0]:
+  time      : 2025-01-23_11:26:51
+  host      : gpu-1.novalocal
+  rank      : 0 (local_rank: 0)
+  exitcode  : 1 (pid: 3286867)
+  error_file: <N/A>
+  traceback : To enable traceback see: https://pytorch.org/docs/stable/elastic/errors.html
+============================================================
+gpuidx: 0 with rank: 0 with world size: 2
+initialized the distributed DNN
+gpuidx: 1 with rank: 1 with world size: 2
+You are using a model of type llama to instantiate a model of type . This is not supported for all configurations of models and can yield errors.
+Configuring the model with {'d_model': 2048, 'd_hidden': 5632}
+You are using a model of type llama to instantiate a model of type . This is not supported for all configurations of models and can yield errors.
+Configuring the model with {'d_model': 2048, 'd_hidden': 5632}
+INFO:root:Wrapping layer 0 from mlp to fMoE
+I0123 11:27:59.400978 3289031 moe_utils.py:67] Wrapping layer 0 from mlp to fMoE
+[rank1]: Traceback (most recent call last):
+[rank1]:   File "/data/home/wjbang/workspace/pMoE/pMoE/main.py", line 416, in <module>
+[rank1]:     fmoe_time = baseline(args, mesh_shape=mesh_shape, mesh_dims=mesh_dims, dataloader=dataloader, iteration=100, imbalance_level=0.125)
+[rank1]:                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/data/home/wjbang/workspace/pMoE/pMoE/main.py", line 375, in baseline
+[rank1]:     raise e
+[rank1]:   File "/data/home/wjbang/workspace/pMoE/pMoE/main.py", line 290, in baseline
+[rank1]:     model = llama_wrapper(model, "fMoE", {"total_experts": num_experts, "d_model": llama_dict['d_model'], "d_hidden": llama_dict['d_hidden'], "top_k": 1, "world_size": world_size, "moe_group": group}, 
+[rank1]:             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/home/wjbang/anaconda3/envs/shan_cuda12.1/lib/python3.12/site-packages/torch/utils/_contextlib.py", line 116, in decorate_context
+[rank1]:     return func(*args, **kwargs)
+[rank1]:            ^^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/data/home/wjbang/workspace/pMoE/pMoE/lib/moe_utils.py", line 72, in llama_wrapper
+[rank1]:     model.model.layers[i].mlp = FMoETransformerMLP(num_expert=total_experts, d_model=d_model, d_hidden=d_hidden, top_k=top_k, world_size=world_size, moe_group=moe_group, gate=gate, imbalance_level=imbalance_level, is_llama=True).to(torch.bfloat16).to(gpu_idx)
+[rank1]:                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank1]:   File "/home/wjbang/anaconda3/envs/shan_cuda12.1/lib/python3.12/site-packages/fastmoe-1.1.0-py3.12-linux-x86_64.egg/fmoe/transformer.py", line 110, in __init__
+[rank1]:     super().__init__(num_expert=num_expert, d_model=d_model, expert=expert, **kwargs)
+[rank1]: TypeError: FMoE.__init__() got an unexpected keyword argument 'imbalance_level'
+INFO:root:Wrapping layer 0 from mlp to fMoE
+I0123 11:27:59.448070 3289030 moe_utils.py:67] Wrapping layer 0 from mlp to fMoE
+[rank0]: Traceback (most recent call last):
+[rank0]:   File "/data/home/wjbang/workspace/pMoE/pMoE/main.py", line 416, in <module>
+[rank0]:     fmoe_time = baseline(args, mesh_shape=mesh_shape, mesh_dims=mesh_dims, dataloader=dataloader, iteration=100, imbalance_level=0.125)
+[rank0]:                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/data/home/wjbang/workspace/pMoE/pMoE/main.py", line 375, in baseline
+[rank0]:     raise e
+[rank0]:   File "/data/home/wjbang/workspace/pMoE/pMoE/main.py", line 290, in baseline
+[rank0]:     model = llama_wrapper(model, "fMoE", {"total_experts": num_experts, "d_model": llama_dict['d_model'], "d_hidden": llama_dict['d_hidden'], "top_k": 1, "world_size": world_size, "moe_group": group}, 
+[rank0]:             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/wjbang/anaconda3/envs/shan_cuda12.1/lib/python3.12/site-packages/torch/utils/_contextlib.py", line 116, in decorate_context
+[rank0]:     return func(*args, **kwargs)
+[rank0]:            ^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/data/home/wjbang/workspace/pMoE/pMoE/lib/moe_utils.py", line 72, in llama_wrapper
+[rank0]:     model.model.layers[i].mlp = FMoETransformerMLP(num_expert=total_experts, d_model=d_model, d_hidden=d_hidden, top_k=top_k, world_size=world_size, moe_group=moe_group, gate=gate, imbalance_level=imbalance_level, is_llama=True).to(torch.bfloat16).to(gpu_idx)
+[rank0]:                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+[rank0]:   File "/home/wjbang/anaconda3/envs/shan_cuda12.1/lib/python3.12/site-packages/fastmoe-1.1.0-py3.12-linux-x86_64.egg/fmoe/transformer.py", line 110, in __init__
+[rank0]:     super().__init__(num_expert=num_expert, d_model=d_model, expert=expert, **kwargs)
+[rank0]: TypeError: FMoE.__init__() got an unexpected keyword argument 'imbalance_level'
+W0123 11:28:00.701000 140199179056960 torch/distributed/elastic/multiprocessing/api.py:858] Sending process 3289031 closing signal SIGTERM
+E0123 11:28:00.815000 140199179056960 torch/distributed/elastic/multiprocessing/api.py:833] failed (exitcode: 1) local_rank: 0 (pid: 3289030) of binary: /home/wjbang/anaconda3/envs/shan_cuda12.1/bin/python
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/home/wjbang/anaconda3/envs/shan_cuda12.1/lib/python3.12/site-packages/torch/distributed/run.py", line 905, in <module>
+    main()
+  File "/home/wjbang/anaconda3/envs/shan_cuda12.1/lib/python3.12/site-packages/torch/distributed/elastic/multiprocessing/errors/__init__.py", line 348, in wrapper
+    return f(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^
+  File "/home/wjbang/anaconda3/envs/shan_cuda12.1/lib/python3.12/site-packages/torch/distributed/run.py", line 901, in main
+    run(args)
+  File "/home/wjbang/anaconda3/envs/shan_cuda12.1/lib/python3.12/site-packages/torch/distributed/run.py", line 892, in run
+    elastic_launch(
+  File "/home/wjbang/anaconda3/envs/shan_cuda12.1/lib/python3.12/site-packages/torch/distributed/launcher/api.py", line 133, in __call__
+    return launch_agent(self._config, self._entrypoint, list(args))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/wjbang/anaconda3/envs/shan_cuda12.1/lib/python3.12/site-packages/torch/distributed/launcher/api.py", line 264, in launch_agent
+    raise ChildFailedError(
+torch.distributed.elastic.multiprocessing.errors.ChildFailedError: 
+============================================================
+main.py FAILED
+------------------------------------------------------------
+Failures:
+  <NO_OTHER_FAILURES>
+------------------------------------------------------------
+Root Cause (first observed failure):
+[0]:
+  time      : 2025-01-23_11:28:00
+  host      : gpu-1.novalocal
+  rank      : 0 (local_rank: 0)
+  exitcode  : 1 (pid: 3289030)
+  error_file: <N/A>
+  traceback : To enable traceback see: https://pytorch.org/docs/stable/elastic/errors.html
+============================================================
+gpuidx: 0 with rank: 0 with world size: 2
+initialized the distributed DNN
+gpuidx: 1 with rank: 1 with world size: 2
+You are using a model of type llama to instantiate a model of type . This is not supported for all configurations of models and can yield errors.
+Configuring the model with {'d_model': 2048, 'd_hidden': 5632}
+You are using a model of type llama to instantiate a model of type . This is not supported for all configurations of models and can yield errors.
+Configuring the model with {'d_model': 2048, 'd_hidden': 5632}
+INFO:root:Wrapping layer 0 from mlp to fMoE
+I0123 11:35:44.288490 3291831 moe_utils.py:67] Wrapping layer 0 from mlp to fMoE
+INFO:root:Wrapping layer 0 from mlp to fMoE
+I0123 11:35:44.393550 3291830 moe_utils.py:67] Wrapping layer 0 from mlp to fMoE
+INFO:root:Wrapping layer 1 from mlp to fMoE
+I0123 11:35:57.442718 3291830 moe_utils.py:67] Wrapping layer 1 from mlp to fMoE
+INFO:root:Wrapping layer 1 from mlp to fMoE
+I0123 11:35:57.486137 3291831 moe_utils.py:67] Wrapping layer 1 from mlp to fMoE
+INFO:root:Wrapping layer 2 from mlp to fMoE
+I0123 11:36:08.468526 3291830 moe_utils.py:67] Wrapping layer 2 from mlp to fMoE
+INFO:root:Wrapping layer 2 from mlp to fMoE
+I0123 11:36:08.638375 3291831 moe_utils.py:67] Wrapping layer 2 from mlp to fMoE
+INFO:root:Wrapping layer 3 from mlp to fMoE
+I0123 11:36:19.790729 3291830 moe_utils.py:67] Wrapping layer 3 from mlp to fMoE
+INFO:root:Wrapping layer 3 from mlp to fMoE
+I0123 11:36:20.289028 3291831 moe_utils.py:67] Wrapping layer 3 from mlp to fMoE
+INFO:root:Wrapping layer 4 from mlp to fMoE
+I0123 11:36:31.355616 3291830 moe_utils.py:67] Wrapping layer 4 from mlp to fMoE
+INFO:root:Wrapping layer 4 from mlp to fMoE
+I0123 11:36:33.369845 3291831 moe_utils.py:67] Wrapping layer 4 from mlp to fMoE
+INFO:root:Wrapping layer 5 from mlp to fMoE
+I0123 11:36:42.832444 3291830 moe_utils.py:67] Wrapping layer 5 from mlp to fMoE
+INFO:root:Wrapping layer 5 from mlp to fMoE
+I0123 11:36:46.788092 3291831 moe_utils.py:67] Wrapping layer 5 from mlp to fMoE
+INFO:root:Wrapping layer 6 from mlp to fMoE
+I0123 11:36:55.490730 3291830 moe_utils.py:67] Wrapping layer 6 from mlp to fMoE
+INFO:root:Wrapping layer 6 from mlp to fMoE
+I0123 11:37:00.273119 3291831 moe_utils.py:67] Wrapping layer 6 from mlp to fMoE
+INFO:root:Wrapping layer 7 from mlp to fMoE
+I0123 11:37:08.849269 3291830 moe_utils.py:67] Wrapping layer 7 from mlp to fMoE
+INFO:root:Wrapping layer 7 from mlp to fMoE
+I0123 11:37:13.454772 3291831 moe_utils.py:67] Wrapping layer 7 from mlp to fMoE
+processing 0th data
+processing 10th data
+processing 20th data
+processing 30th data
+processing 40th data
+processing 50th data
+processing 60th data
+processing 70th data
+processing 80th data
+processing 90th data
+processing 100th data
+FMOE: [Rank 1] Average Elapsed Time: 92.21008361816406ms 
+
+FMOE: [Rank 0] Average Elapsed Time: 92.26937339782715ms 
+
+gpuidx: 0 with rank: 0 with world size: 2
+initialized the distributed DNN
+gpuidx: 1 with rank: 1 with world size: 2
+You are using a model of type llama to instantiate a model of type . This is not supported for all configurations of models and can yield errors.
+Configuring the model with {'d_model': 2048, 'd_hidden': 5632}
+You are using a model of type llama to instantiate a model of type . This is not supported for all configurations of models and can yield errors.
+Configuring the model with {'d_model': 2048, 'd_hidden': 5632}
+INFO:root:Wrapping layer 0 from mlp to fMoE
+I0123 11:40:02.325079 3293304 moe_utils.py:67] Wrapping layer 0 from mlp to fMoE
+INFO:root:Wrapping layer 0 from mlp to fMoE
+I0123 11:40:02.499043 3293303 moe_utils.py:67] Wrapping layer 0 from mlp to fMoE
+INFO:root:Wrapping layer 1 from mlp to fMoE
+I0123 11:40:15.676594 3293303 moe_utils.py:67] Wrapping layer 1 from mlp to fMoE
+INFO:root:Wrapping layer 1 from mlp to fMoE
+I0123 11:40:15.762781 3293304 moe_utils.py:67] Wrapping layer 1 from mlp to fMoE
+INFO:root:Wrapping layer 2 from mlp to fMoE
+I0123 11:40:28.957787 3293304 moe_utils.py:67] Wrapping layer 2 from mlp to fMoE
+INFO:root:Wrapping layer 2 from mlp to fMoE
+I0123 11:40:29.967459 3293303 moe_utils.py:67] Wrapping layer 2 from mlp to fMoE
+INFO:root:Wrapping layer 3 from mlp to fMoE
+I0123 11:40:42.263030 3293304 moe_utils.py:67] Wrapping layer 3 from mlp to fMoE
+INFO:root:Wrapping layer 3 from mlp to fMoE
+I0123 11:40:44.214271 3293303 moe_utils.py:67] Wrapping layer 3 from mlp to fMoE
+INFO:root:Wrapping layer 4 from mlp to fMoE
+I0123 11:40:55.521901 3293304 moe_utils.py:67] Wrapping layer 4 from mlp to fMoE
+INFO:root:Wrapping layer 4 from mlp to fMoE
+I0123 11:40:58.526365 3293303 moe_utils.py:67] Wrapping layer 4 from mlp to fMoE
+INFO:root:Wrapping layer 5 from mlp to fMoE
+I0123 11:41:08.628161 3293304 moe_utils.py:67] Wrapping layer 5 from mlp to fMoE
+INFO:root:Wrapping layer 5 from mlp to fMoE
+I0123 11:41:12.759963 3293303 moe_utils.py:67] Wrapping layer 5 from mlp to fMoE
+INFO:root:Wrapping layer 6 from mlp to fMoE
+I0123 11:41:22.872078 3293304 moe_utils.py:67] Wrapping layer 6 from mlp to fMoE
+INFO:root:Wrapping layer 6 from mlp to fMoE
+I0123 11:41:27.037166 3293303 moe_utils.py:67] Wrapping layer 6 from mlp to fMoE
+INFO:root:Wrapping layer 7 from mlp to fMoE
+I0123 11:41:37.112852 3293304 moe_utils.py:67] Wrapping layer 7 from mlp to fMoE
+INFO:root:Wrapping layer 7 from mlp to fMoE
+I0123 11:41:41.309827 3293303 moe_utils.py:67] Wrapping layer 7 from mlp to fMoE
+processing 0th data
+processing 10th data
+processing 20th data
+processing 30th data
+processing 40th data
+processing 50th data
+processing 60th data
+processing 70th data
+processing 80th data
+processing 90th data
+processing 100th dataFMOE: [Rank 1] Average Elapsed Time: 124.62714897155762ms 
+
+
+FMOE: [Rank 0] Average Elapsed Time: 124.5183283996582ms 
+

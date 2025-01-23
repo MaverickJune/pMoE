@@ -84,35 +84,22 @@ class FMoETransformerMLP(FMoE):
         num_expert=32,
         d_model=1024,
         d_hidden=4096,
-        activation=torch.nn.SiLU(),
+        activation=torch.nn.GELU(),
         expert_dp_comm="none",
         expert_rank=0,
-        is_deepseek=False,
+        gate='pshave',
+        top_k=1,
+        imbalance_level=0.125,
+        is_llama=False,
         **kwargs
     ):
         def one_expert(d_model):
             return _Expert(1, d_model, d_hidden, activation, rank=0)
         
-        def one_deepseek_expert(d_model):
-            return _DeepseekExpert(1, d_model, d_hidden, activation, rank=0)
-        
-        # Logics related to deepseek
-        self.is_deepseek = is_deepseek
-        self.shared_experts = None
-        if is_deepseek:
-            self.shared_experts = None # TODO: FIXIT
-        
-        if is_deepseek:
-            expert = one_deepseek_expert
-        else:
-            expert = one_expert
-            
-        super().__init__(num_expert=num_expert, d_model=d_model, expert=expert, **kwargs)
-            
-        if is_deepseek:
-            self.shared_experts = Custom_DeepseekMLP(d_model, 2 * d_hidden) # config.n_shared_experts = 2
-            
+        expert = one_expert
+        super().__init__(num_expert=num_expert, d_model=d_model, expert=expert, gate=gate, top_k=top_k, imbalance_level=imbalance_level, **kwargs)
         self.mark_parallel_comm(expert_dp_comm)
+        self.is_llama = is_llama
 
     def forward(self, inp: torch.Tensor):
         r"""
@@ -122,12 +109,8 @@ class FMoETransformerMLP(FMoE):
         original_shape = inp.shape
         inp = inp.reshape(-1, self.d_model)
         output, idx = super().forward(inp)
-        
-        if self.is_deepseek:
-            output = output.reshape(original_shape)
-            output = output + self.shared_experts(inp.reshape(original_shape))
-            return output # No idx for deepseek
-        
+        if self.is_llama:
+            return output.reshape(original_shape)
         return output.reshape(original_shape), idx
 
 class _pExpert(nn.Module):

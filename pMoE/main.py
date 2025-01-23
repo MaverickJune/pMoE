@@ -232,7 +232,7 @@ def main(args, mesh_shape, mesh_dims, dataloader, iteration=10):
         gc.collect()
         cleanup()
 
-def baseline(args, mesh_shape, mesh_dims, dataloader, iteration=10):
+def baseline(args, mesh_shape, mesh_dims, dataloader, iteration=10, imbalance_level=0.125):
     """
     Function of baseline model.
     """
@@ -280,8 +280,15 @@ def baseline(args, mesh_shape, mesh_dims, dataloader, iteration=10):
         # Define MoE Model
         # model = load_tinymix(gpu_idx)
         # model = tinymix_wrapper(model, "fMoE", {"total_experts": num_experts, "d_model": 2048, "d_hidden": 5632, "top_k": 2, "world_size": world_size, "moe_group": group}, ctx, gpu_rank, gpu_idx).to(gpu_idx)
-        model = load_deepseek(gpu_idx)
-        model = deepseek_wrapper(model, "fMoE", {"total_experts": num_experts, "d_model": 2048, "d_hidden": 1408, "top_k": 2, "world_size": world_size, "moe_group": group}, ctx, gpu_rank, gpu_idx).to(gpu_idx)
+        # model = load_deepseek(gpu_idx)
+        # model = deepseek_wrapper(model, "fMoE", {"total_experts": num_experts, "d_model": 2048, "d_hidden": 1408, "top_k": 2, "world_size": world_size, "moe_group": group}, ctx, gpu_rank, gpu_idx).to(gpu_idx)
+        llama_dict = {
+            "d_model": 2048,
+            "d_hidden": 5632
+        }
+        model = get_model_from_hf("meta-llama/Llama-3.1-70B-Instruct", partial=0.1, gpu_idx=gpu_idx, llama_dict=llama_dict)
+        model = llama_wrapper(model, "fMoE", {"total_experts": num_experts, "d_model": llama_dict['d_model'], "d_hidden": llama_dict['d_hidden'], "top_k": 1, "world_size": world_size, "moe_group": group}, 
+                              ctx, gpu_rank, gpu_idx, gate='pshave', imbalance_level=imbalance_level)
         model.eval()
         
         # model = llama_wrapper(_model, "pMoE", {"total_experts": num_experts, "d_model": 8192, "d_hidden": 28672, "top_k": 2}, ctx, gpu_idx)
@@ -387,10 +394,10 @@ if __name__ == "__main__":
     mesh_dims = ("dp", "tp")  
     # Define Dataset and DataLoader
     # Set up the distributed DataLoader
-    d_name ="squad" # wikitext-103, enwik8, wikitext-2
+    d_name ="wikitext-2" # wikitext-103, enwik8, wikitext-2
     args.d_name = d_name
     
-    dataset = pMOEdataset(dataset_name=d_name, model_name="deepseek-ai/deepseek-moe-16b-base")
+    dataset = pMOEdataset(dataset_name=d_name, model_name="meta-llama/Llama-3.1-70B-Instruct")
     dataset.prune_dataset(1024) # prune items that are longer than 1024 tokens
     
     sampler = DistributedSampler(
@@ -406,7 +413,7 @@ if __name__ == "__main__":
     # embedding = torch.load("adaptive_embeddings.pt") # 1024 tokenizer + embedding t
 
     # pmoe_time = main(args, mesh_shape=mesh_shape, mesh_dims=mesh_dims, dataloader=dataloader, iteration=10000)
-    fmoe_time = baseline(args, mesh_shape=mesh_shape, mesh_dims=mesh_dims, dataloader=dataloader, iteration=1000)
+    fmoe_time = baseline(args, mesh_shape=mesh_shape, mesh_dims=mesh_dims, dataloader=dataloader, iteration=100, imbalance_level=0.125)
     # _pmoe = torch.tensor(pmoe_time) 
     _fmoe = torch.tensor(fmoe_time)
     # comp = _pmoe / _fmoe
