@@ -150,7 +150,7 @@ class HardCodedGate:
         return self.gate.sum(dim=1)
     
     def input(self, rank): # all
-        return int(self.gate.sum(dim=1)[rank].item())
+        return int(self.gate.sum(dim=1)[rank].item()) # -> 128 * 4 = 512
     
     def output(self, rank):
         return int(self.gate.sum(dim=0)[rank].item())
@@ -263,8 +263,12 @@ def a2a_ffn_overlap_balance(_input, gate, model_dim, hidden_dim, expert_fn, a2a_
         input[i] = buffer[i].reduce(input[i])
         input[i] = expert_fn(input[i], 1)
         # print(f"RANK: {buffer[i].rank} Debug reduced input: {input[i].shape}, global_dst(): {hex(buffer[i].global_dst().data_ptr())} reshape_dst(): {hex(buffer[i].reshape_dst().data_ptr())}\n")
+        # print(f"RANK: {buffer[i].rank} input: {input[i].size()} output: {buffer[i].buffer_3.size()}, global_dst(): {buffer[i].global_dst()}, reshape dst: {buffer[i].reshape_dst()}\n")  #buffer src: {hex(buffer[i].src().data_ptr())}, buffer dst: {hex(buffer[i].dst().data_ptr())}\n")
+        
         input[i] = Compress.apply(input[i], buffer[i].buffer_3, compress_name, comm_name, buffer[i].global_dst(), buffer[i].reshape_dst())
         # print(f"Debug 3-1: {i}\n")
+        # print(f"RANK: {buffer[i].rank} Debug reduced input: {input[i].shape}, global_dst(): {hex(buffer[i].global_dst().data_ptr())} reshape_dst(): {hex(buffer[i].reshape_dst().data_ptr())}\n")
+        
         input[i] = Comm.apply(input[i], 3)
         # print(f"\n [{buffer[i].rank}] Debug 3-2: {i}\n")
     for i in range(a2a_ffn_overlap_degree):

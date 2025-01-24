@@ -228,7 +228,7 @@ else:
 
 # hard_gate = generate_random_tensor(dist_world_size)
 hard_gate = MimicGate(args.model_dim, 1, dist_world_size, top_k=1, gpu_idx=device, path=args.gate_path)
-_hard_gate = torch.tensor([[64, 64, 64, 64], [64, 64, 64, 64], [64, 64, 64, 64], [64, 64, 64, 64]],  dtype=torch.long)
+_hard_gate = torch.tensor([[128, 128], [128, 128], [128, 128], [128, 128]],  dtype=torch.long)
 # ours -> 128 
 # imb -> 64
 # ours -> 96
@@ -346,7 +346,7 @@ if __name__ == "__main__":
     
     pstart_event.record()
     with nvtx.annotate("ScheMoE", color="green"):
-        for i in range(1):
+        for i in range(100):
             with torch.no_grad():
                 _ = moe_layer(input)
     pend_event.record()
@@ -358,7 +358,7 @@ if __name__ == "__main__":
     
     start_event.record()
     with nvtx.annotate("pMoE", color="green"):
-        for i in range(1):
+        for i in range(100):
             with torch.no_grad():
                 _ = pmoe_layer(input)
     end_event.record()

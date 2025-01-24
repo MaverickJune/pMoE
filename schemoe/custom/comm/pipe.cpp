@@ -155,7 +155,7 @@ void PipeComm::all_to_all(const torch::Tensor &input, const torch::Tensor &outpu
                                 i,
                                 g_nccl_comm[is_intra],
                                 stream->at(is_intra).stream()));
-            CHECK_EQ(0, ncclRecv(((char *)output.data_ptr()) + i * o_offsets[i],
+            CHECK_EQ(0, ncclRecv(((char *)output.data_ptr()) + o_offsets[i],
                                 gidx[i] * length,
                                 ncclInt8,
                                 i,
