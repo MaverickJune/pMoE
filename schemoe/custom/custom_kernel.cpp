@@ -24,6 +24,8 @@
 #include "compressor/zfpc.h"
 #include "dd_comm.h"
 #include "jit.h"
+#include <unistd.h>
+
 #else
 #undef USE_NCCL
 #endif
@@ -239,37 +241,87 @@ static void clear_ptr_lst() {
   decompress_cnt = 0;
 }
 
+// static torch::Tensor compress_operation(const torch::Tensor &input,
+//                                         const torch::Tensor &output,
+//                                         const std::string &str,
+//                                         const std::string &comm_name,
+//                                         const torch::Tensor &local_idx,
+//                                         const torch::Tensor &global_idx) {
+//   size_t idx = compress_ptr_lst.size();
+//   std::shared_ptr<AbstractComm> comm_ptr = get_comm(comm_name);
+//   // std::make_shared<NaiveComm>(&g_nccl_stream, g_nccl_comm, g_world_size,
+//   //                             g_world_rank, g_local_size, g_local_rank);
+//   compress_ptr_lst.emplace_back(get_compressor(str, comm_ptr));
+//   torch::Tensor after_compress = compress_ptr_lst.back()->compress(output, local_idx, global_idx);
+  
+//   compress_ptr_lst.back()->i_input = at::empty_like(input);
+
+//   for (auto &events : g_cuda_events) {
+//     events[idx].record(at::cuda::getCurrentCUDAStream());
+//   }
+//   for (auto &nccl_stream : g_nccl_stream) {
+//     c10::cuda::CUDACachingAllocator::recordStream(
+//         compress_ptr_lst.back()->i_input.storage().data_ptr(), nccl_stream);
+//   }
+//   return compress_ptr_lst.back()->i_input;
+// }
+
+// static torch::Tensor comm_operation(const torch::Tensor &input, const size_t version) {
+//   const int idx = comm_cnt++;
+//   const at::cuda::CUDAStream &original_stream =
+//       at::cuda::getCurrentCUDAStream();
+//   // std::cout << "????" << std::endl;
+//   compress_ptr_lst[idx]->pre_comm(&original_stream); 
+//   // std::cout << "!!!!" << std::endl;
+//   for (int i = 0; i < g_nccl_stream.size(); ++i) {
+//     g_cuda_events[i][idx].block(g_nccl_stream[i]);
+//   }
+//   // std::cout << "comm_operation" << std::endl;
+//   compress_ptr_lst[idx]->all_to_all(compress_ptr_lst[idx]->i_input, compress_ptr_lst[idx]->g_output, version);
+//   // std::cout << "comm_operation done" << std::endl;
+//   for (int i = 0; i < g_nccl_stream.size(); ++i) {
+//     g_cuda_events[i][idx].record(g_nccl_stream[i]);
+//   }
+//   return compress_ptr_lst[idx]->g_output;
+// }
+
+
 static torch::Tensor compress_operation(const torch::Tensor &input,
+                                        const torch::Tensor &output,
                                         const std::string &str,
-                                        const std::string &comm_name) {
+                                        const std::string &comm_name,
+                                        const torch::Tensor &local_idx,
+                                        const torch::Tensor &global_idx) {
   size_t idx = compress_ptr_lst.size();
   std::shared_ptr<AbstractComm> comm_ptr = get_comm(comm_name);
   // std::make_shared<NaiveComm>(&g_nccl_stream, g_nccl_comm, g_world_size,
   //                             g_world_rank, g_local_size, g_local_rank);
   compress_ptr_lst.emplace_back(get_compressor(str, comm_ptr));
-  torch::Tensor after_compress = compress_ptr_lst.back()->compress(input);
+  torch::Tensor after_compress = compress_ptr_lst.back()->compress(output, local_idx, global_idx);
+
   for (auto &events : g_cuda_events) {
     events[idx].record(at::cuda::getCurrentCUDAStream());
   }
   for (auto &nccl_stream : g_nccl_stream) {
     c10::cuda::CUDACachingAllocator::recordStream(
-        after_compress.storage().data_ptr(), nccl_stream);
+        input.storage().data_ptr(), nccl_stream);
   }
-  return after_compress;
+  return input;
 }
 
-static torch::Tensor comm_operation(const torch::Tensor &input) {
+static torch::Tensor comm_operation(const torch::Tensor &input, const size_t version) {
   const int idx = comm_cnt++;
   const at::cuda::CUDAStream &original_stream =
       at::cuda::getCurrentCUDAStream();
   // std::cout << "????" << std::endl;
-  compress_ptr_lst[idx]->pre_comm(&original_stream);
-
+  compress_ptr_lst[idx]->pre_comm(&original_stream); 
   // std::cout << "!!!!" << std::endl;
   for (int i = 0; i < g_nccl_stream.size(); ++i) {
     g_cuda_events[i][idx].block(g_nccl_stream[i]);
   }
-  compress_ptr_lst[idx]->all_to_all(input, compress_ptr_lst[idx]->g_output);
+  // std::cout << "comm_operation" << std::endl;
+  compress_ptr_lst[idx]->all_to_all(input, compress_ptr_lst[idx]->g_output, version);
+  // std::cout << "comm_operation done" << std::endl;
   for (int i = 0; i < g_nccl_stream.size(); ++i) {
     g_cuda_events[i][idx].record(g_nccl_stream[i]);
   }

@@ -10,14 +10,17 @@
 
 class AbstractCompressor {
 public:
-    virtual torch::Tensor compress(const torch::Tensor &)                          = 0;
+    virtual torch::Tensor compress(const torch::Tensor &, const torch::Tensor &, const torch::Tensor &)                          = 0;
     virtual torch::Tensor decompress(const torch::Tensor &)                        = 0;
-    virtual void          all_to_all(const torch::Tensor &, const torch::Tensor &) = 0;
+    virtual void          all_to_all(const torch::Tensor &, const torch::Tensor &, size_t) = 0;
     virtual void          pre_comm(const at::cuda::CUDAStream *);
     AbstractCompressor(std::shared_ptr<AbstractComm>);
     virtual ~AbstractCompressor();
 
     torch::Tensor                 g_output;
+    torch::Tensor                 i_input; 
+    // std::vector<size_t>           idx;
+    // std::vector<size_t>           gidx;
     std::shared_ptr<AbstractComm> comm_ptr;
 };
 

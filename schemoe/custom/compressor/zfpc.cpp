@@ -20,7 +20,7 @@ void ZfpCompressor::set_compress_rate(const double &compress_rate) {
     this->compress_rate = compress_rate;
 }
 
-torch::Tensor ZfpCompressor::compress(const torch::Tensor &input) {
+torch::Tensor ZfpCompressor::compress(const torch::Tensor &input, const torch::Tensor &idx, const torch::Tensor &gidx) {
     sizes = input.sizes().vec();
     // std::cout << sizes[0] << " " << sizes[1] << " " << sizes[2] << std::endl;
     AT_ASSERTM(sizes[0] % 4 == 0, "zfp fails.");
@@ -86,7 +86,8 @@ torch::Tensor ZfpCompressor::decompress(const torch::Tensor &input) {
 }
 
 void ZfpCompressor::all_to_all(const torch::Tensor &input,
-                               const torch::Tensor &output) {
+                               const torch::Tensor &output,
+                               size_t version) {
     // cudaMemcpyAsync(output.data_ptr(), input.data_ptr(), input.nbytes(),
     // cudaMemcpyDeviceToDevice, stream->stream());
 

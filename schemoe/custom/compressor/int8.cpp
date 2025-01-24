@@ -4,7 +4,7 @@ Int8Compressor::Int8Compressor(std::shared_ptr<AbstractComm> comm_ptr) :
     AbstractCompressor(comm_ptr) {
 }
 
-torch::Tensor Int8Compressor::compress(const torch::Tensor &input) {
+torch::Tensor Int8Compressor::compress(const torch::Tensor &input, const torch::Tensor &idx, const torch::Tensor &gidx) {
     sizes                = input.sizes().vec();
     dtype                = input.dtype();
     bias                 = std::get<0>(torch::min(input, -1, true));
@@ -66,7 +66,7 @@ void Int8Compressor::pre_comm(const at::cuda::CUDAStream *cal_stream) {
     // c10::cuda::CUDACachingAllocator::recordStream(g_bias.storage().data_ptr(), *cal_stream);
 }
 
-void Int8Compressor::all_to_all(const torch::Tensor &input, const torch::Tensor &output) {
+void Int8Compressor::all_to_all(const torch::Tensor &input, const torch::Tensor &output, size_t version) {
     // std::cout << (output).data_ptr() << std::endl;
     comm_ptr->all_to_all(input, output, length);
     comm_ptr->all_to_all(bias, g_bias, bias.nbytes());

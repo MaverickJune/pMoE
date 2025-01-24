@@ -16,7 +16,8 @@ from contextlib import nullcontext
 from typing import Any
 import time
 
-
+torch.set_num_threads(8)
+os.environ['OMP_NUM_THREADS'] = '4'
 def decorate_trace_handler(args, rank):
     def trace_handler(prof):
         print(prof.key_averages().table(sort_by="self_cuda_time_total", row_limit=-1))

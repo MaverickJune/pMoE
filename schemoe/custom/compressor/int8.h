@@ -13,9 +13,9 @@
 class Int8Compressor : public AbstractCompressor {
 public:
     // Declare all public members here
-    torch::Tensor compress(const torch::Tensor &);
+    torch::Tensor compress(const torch::Tensor &, const torch::Tensor &, const torch::Tensor &);
     torch::Tensor decompress(const torch::Tensor &);
-    void          all_to_all(const torch::Tensor &, const torch::Tensor &);
+    void          all_to_all(const torch::Tensor &, const torch::Tensor &, size_t);
     void          pre_comm(const at::cuda::CUDAStream *);
     Int8Compressor(std::shared_ptr<AbstractComm>);
     ~Int8Compressor() = default;

@@ -21,6 +21,21 @@ public:
     int                                g_world_rank;
     int                                g_local_size;
     int                                g_local_rank;
+    int64_t*                           idx;
+    int64_t*                           gidx;
+    
+    // torch::Tensor                      i_batch;
+    // torch::Tensor                      g_batch;
+    // int64_t*                           i_batch;
+    // int64_t*                           g_batch;
+    int64_t                            i_batch;
+    int64_t                            g_batch;
+    
+
+    // torch::Tensor                      i_offset; 
+    // torch::Tensor                      o_offset; 
+    // int64_t*                           i_offsets;
+    // int64_t*                           o_offsets;
 };
 
 #endif // ABSTRACT_COMM

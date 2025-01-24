@@ -9,4 +9,4 @@ from .impls.fast_dispatch import fast_dispatcher, extract_critical, fast_encode,
 top_k_routing = extract_critical
 
 # High-level Ops
-from .impls.moe_layer import moe_layer
+from .impls.moe_layer import moe_layer, pmoe_layer

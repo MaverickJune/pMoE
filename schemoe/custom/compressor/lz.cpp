@@ -1,6 +1,6 @@
 #include "lz.h"
 
-torch::Tensor LzCompressor::compress(const torch::Tensor &input) {
+torch::Tensor LzCompressor::compress(const torch::Tensor &input, const torch::Tensor &idx, const torch::Tensor &gidx) {
     std::vector<at::Tensor> input_list = at::split(input, input.size(0) / comm_ptr->g_world_size, 0);
     std::vector<at::Tensor> flagArrOffsetGlobalList;
     std::vector<at::Tensor> compressedDataOffsetGlobalList;
@@ -65,7 +65,7 @@ LzCompressor::LzCompressor(std::shared_ptr<AbstractComm> comm_ptr) :
     AbstractCompressor(comm_ptr) {
 }
 
-void LzCompressor::all_to_all(const torch::Tensor &input, const torch::Tensor &output) {
+void LzCompressor::all_to_all(const torch::Tensor &input, const torch::Tensor &output, size_t version) {
     // comm_ptr->all_to_all(input, output, input.nbytes());
     comm_ptr->all_to_all(flagArrOffsetGlobal, g_flagArrOffsetGlobal, flagArrOffsetGlobal.nbytes());
     comm_ptr->all_to_all(compressedDataOffsetGlobal, g_compressedDataOffsetGlobal, compressedDataOffsetGlobal.nbytes());
