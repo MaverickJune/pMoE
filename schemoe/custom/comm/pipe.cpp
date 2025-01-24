@@ -97,8 +97,8 @@ void PipeComm::all_to_all(const torch::Tensor &input, const torch::Tensor &outpu
         length = length / g_world_size; // for reshape the data
         
         for (int i = 1; i < g_world_size; ++i) {
-            i_offsets[i] = i_offsets[i - 1] + i * length;
-            o_offsets[i] = o_offsets[i - 1] + i * length;
+            i_offsets[i] = i_offsets[i - 1] + length;
+            o_offsets[i] = o_offsets[i - 1] + length;
         }
         CHECK_EQ(0, ncclGroupStart());
         for (int i = 0; i < g_world_size; ++i) {

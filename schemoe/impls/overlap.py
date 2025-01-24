@@ -242,6 +242,7 @@ def a2a_ffn_overlap_balance(_input, gate, model_dim, hidden_dim, expert_fn, a2a_
     for i in range(a2a_ffn_overlap_degree):
         # print(f"Pipeline Stage: {i}\n")
         input[i] = buffer[i].input #.clone().contiguous()
+        # print(f"input data: {input[i].size()}\n")
         # print(f"input data ptr: {hex(input[i].data_ptr())}, device: {input[i].device} \n")
         input[i] = Compress.apply(input[i], buffer[i].buffer_1, compress_name, comm_name, buffer[i].src(), buffer[i].global_dst())
         input[i] = Comm.apply(input[i], 1)
@@ -249,13 +250,16 @@ def a2a_ffn_overlap_balance(_input, gate, model_dim, hidden_dim, expert_fn, a2a_
         # print(f"RANK: {buffer[i].rank} buffer src: {hex(buffer[i].src().data_ptr())}, buffer dst: {hex(buffer[i].global_dst().data_ptr())}\n")
     for i in range(a2a_ffn_overlap_degree):
         input[i] = Decompress.apply(input[i], compress_name, comm_name)
-        input[i] = expert_fn(input[i], 0)        
+        # print(f"before compute data: {input[i].size()}\n")
+        input[i] = expert_fn(input[i], 0) 
+        # print(f"after compute data: {input[i].size()}\n")
         # print(f"RANK: {buffer[i].rank} buffer src: {hex(buffer[i].src().data_ptr())}, buffer dst: {hex(buffer[i].dst().data_ptr())}\n")
         input[i] = Compress.apply(input[i], buffer[i].buffer_2, compress_name, comm_name, buffer[i].src(), buffer[i].dst())
         input[i] = Comm.apply(input[i], 2)
         # print(f"Debug 2: {i} \n")
     for i in range(a2a_ffn_overlap_degree):
         input[i] = Decompress.apply(input[i], compress_name, comm_name)
+        # print(f"before compute2 data: {input[i].size()}\n")  
         input[i] = buffer[i].reduce(input[i])
         input[i] = expert_fn(input[i], 1)
         # print(f"RANK: {buffer[i].rank} Debug reduced input: {input[i].shape}, global_dst(): {hex(buffer[i].global_dst().data_ptr())} reshape_dst(): {hex(buffer[i].reshape_dst().data_ptr())}\n")

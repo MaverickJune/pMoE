@@ -9,7 +9,7 @@ conda_env="shan_cuda12.1"
 
 # nodes=("nxc-node0" "nxc-node1" "nxc-node2" "nxc-node3")
 # nodes=("nxc-node0" "nxc-node1")
-nodes=("7ab9441413cc")
+nodes="$(hostname)"
 
 log_dir=logs
 config_dir="/shared/workspace/shan/pMoE/config"
@@ -30,11 +30,11 @@ export NUMEXPR_NUM_THREADS=32   # Limit NumExpr threads to 1
 export TORCH_NUM_THREADS=32     # Limit PyTorch threads to 1
 export TRANSFORMERS_VERBOSITY=warning
 export HF_DATASETS_VERBOSITY=warning
-
+export CUDA_LAUNCH_BLOCKING=1
 # Activate the conda environment
 # source $conda_path activate $conda_env
 
-nproc_per_node=2 # GPUs
+nproc_per_node=4 # GPUs
 nnodes=${#nodes[@]}  # # nodes
 hostname=$(hostname)
 
@@ -67,15 +67,15 @@ echo "Running on node: $hostname with node_rank: $node_rank"
 # python3 -m torch.distributed.run --nproc_per_node=2 -m schemoe.examples.layer_test --gate_path "/workspace/ScheMoe_Custom/pMoE/p_count_selected.csv"
 # parser.add_argument("--schemoe_overlap_degree", type=int, default=1)
 # NCCL_SOCKET_IFNAME=ens4f0np0 
-export CUDA_VISIBLE_DEVICES=1,2
+# export CUDA_VISIBLE_DEVICES=1,2
 python3 -m torch.distributed.run \
   --nproc_per_node=$nproc_per_node \
   --nnodes=$nnodes \
   --node_rank=$node_rank \
   --master_addr='localhost' \
   --master_port=12357 \
-  -m schemoe.examples.layer_test \
-  --gate_path "/workspace/ScheMoe_Custom/pMoE/p_count_selected.csv" \
+  -m layer_test \
+  --gate_path "/workspace/pMoE/p_count_selected.csv" \
   --schemoe_overlap_degree 1
 #   --model_config $model_config/$model.json \
 #   --data_config $data_config/$dataset.json 2>&1 | tee -a $LOG/$SAVE_NAME.txt

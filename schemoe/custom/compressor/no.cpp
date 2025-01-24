@@ -27,7 +27,7 @@
 //     return input;
 // }
 torch::Tensor NoCompressor::compress(const torch::Tensor &output, const torch::Tensor &idx, const torch::Tensor &gidx) {
-    g_output = at::empty_like(output);
+    g_output = output;
 
     // Ensure tensors are on GPU
     if (idx.is_cuda() || gidx.is_cuda()) {

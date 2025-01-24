@@ -1,10 +1,10 @@
 #!/bin/bash
-
-export LD_LIBRARY_PATH=/shared/workspace/ScheMoE/zfp/build/lib:$LD_LIBRARY_PATH
+# 
+# export LD_LIBRARY_PATH=/shared/workspace/ScheMoE/zfp/build/lib:$LD_LIBRARY_PATH
 # export TORCH_SHOW_CPP_STACKTRACES=1
 # export CUDA_LAUNCH_BLOCKING=1
 # export TORCH_DISABLE_ADDR2LINE=1
-
+expoert CUDA_LAUNCH_BLOCKING=1
 # export NCCL_DEBUG=TRACE
 # export NCCL_DEBUG_SUBSYS=ALL
 # export TORCH_NCCL_BLOCKING_WAIT=1

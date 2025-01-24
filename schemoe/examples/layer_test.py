@@ -228,7 +228,7 @@ else:
 
 # hard_gate = generate_random_tensor(dist_world_size)
 hard_gate = MimicGate(args.model_dim, 1, dist_world_size, top_k=1, gpu_idx=device, path=args.gate_path)
-_hard_gate = torch.tensor([[128, 128], [128, 128]],  dtype=torch.long)
+_hard_gate = torch.tensor([[64, 64, 64, 64], [64, 64, 64, 64], [64, 64, 64, 64], [64, 64, 64, 64]],  dtype=torch.long)
 # ours -> 128 
 # imb -> 64
 # ours -> 96
@@ -315,6 +315,7 @@ def balance_moe(args, idx):
     return pmoe_ffn
 
 if __name__ == "__main__":
+    
     #self, d_model, num_expert, world_size, top_k=1,  gpu_idx=-1, path="/home/wjbang/workspace/pMoE/pMoE/p_count_selected.csv"
     pmoe_layer=balance_moe(args, 0)
     moe_layer=schmoe_moe(args, 0)
