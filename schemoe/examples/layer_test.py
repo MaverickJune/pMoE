@@ -168,7 +168,7 @@ parser.add_argument("--local_rank", type=int, default=-1)
 parser.add_argument("--batch_size", type=int, default=16)
 parser.add_argument("--num_tokens", type=int, default=512)
 parser.add_argument("--model_dim", type=int, default=8192) # 4096 
-parser.add_argument("--hidden_size", type=int, default=8192) # 14336
+parser.add_argument("--hidden_size", type=int, default=14336) # 14336
 parser.add_argument("--num_local_experts", type=int, default=2)
 parser.add_argument("--dtype", type=str, default="float32")
 parser.add_argument("--fp32_gate", default=False, action="store_true")
@@ -228,7 +228,7 @@ else:
 
 # hard_gate = generate_random_tensor(dist_world_size)
 hard_gate = MimicGate(args.model_dim, 1, dist_world_size, top_k=1, gpu_idx=device, path=args.gate_path)
-_hard_gate = torch.tensor([[512, 256], [144, 256]],  dtype=torch.long)
+_hard_gate = torch.tensor([[128, 128], [128, 128]],  dtype=torch.long)
 # ours -> 128 
 # imb -> 64
 # ours -> 96

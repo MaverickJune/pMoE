@@ -124,7 +124,7 @@ def install(use_cuda, use_nccl):
             extension(
                 "schemoe_custom_kernel",
                 include_dirs=[
-                    "/shared/workspace/ScheMoE/zfp/include/",
+                    "/usr/local/include",
                 ],
                 sources=[
                     "./schemoe/custom/comm/abstract.cpp",
@@ -143,15 +143,14 @@ def install(use_cuda, use_nccl):
                     "./schemoe/custom/jit.cpp",
                 ],
                 library_dirs=[
-                    "/shared/workspace/ScheMoE/zfp/build/lib",
-                    "/shared/conda/envs/shan_cuda12.1/lib/stubs/",
+                    "/usr/local/lib",
                 ],
                 libraries=ext_libs,
                 extra_compile_args=ext_args,
             )
         ],
         cmdclass={
-            "build_ext": BuildExtension.with_options(parallel=True),
+            "build_ext": BuildExtension,
             "test": Tester,
         },
         project_urls={
