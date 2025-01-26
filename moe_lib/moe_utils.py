@@ -266,7 +266,7 @@ def load_deepseek(gpu_idx):
     
     return model
     
-    
+from transformers import AutoModel
 def get_model_from_hf(model_name="meta-llama/Llama-3.1-70B-Instruct", partial=0.4, gpu_idx=-1, model_dict=None):
     if model_name not in MODEL_DICT.keys():
         raise ValueError(f"Unsupported model name. Choose from {MODEL_DICT.keys()}")
@@ -290,6 +290,7 @@ def get_model_from_hf(model_name="meta-llama/Llama-3.1-70B-Instruct", partial=0.
     
     # Get the model
     model = MODEL_DICT[model_name](config).to(torch.bfloat16).to(gpu_idx)
+    # model = AutoModel.from_config(config).to(torch.bfloat16).to(gpu_idx)
     
     return model
 
@@ -303,5 +304,5 @@ def model_wrapper_spmoe(model, moe_name='schemoe', world_size=-1, args=None):
             model.model.layers[i].mlp = balance_moe(args, world_size, model.device)
         else:
             raise ValueError(f"Invalid MoE name. Choose from ['schemoe', 'pmoe']")
-        
+    # print("finished wrapping!!")
     return model

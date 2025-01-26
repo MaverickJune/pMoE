@@ -165,7 +165,10 @@ def collate_fn_batching(batch, tokenizer):
     tokenized_batch = [tokenizer(text, return_tensors="pt", add_special_tokens=True, return_attention_mask=True) for text in batch]
     
     # Truncate sequences that are longer than the maximum token length
-    tokenized_batch = [item['input_ids'][:, MAX_TOKEN_LEN] for item in tokenized_batch if item['input_ids'].shape[1] <= MAX_TOKEN_LEN]
+    tokenized_batch = [
+        item['input_ids'][:, MAX_TOKEN_LEN] if item['input_ids'].shape[1] >= MAX_TOKEN_LEN else item
+        for item in tokenized_batch
+    ]
 
     # Find the maximum sequence length in the batch
     max_length = max(item['input_ids'].shape[1] for item in tokenized_batch)

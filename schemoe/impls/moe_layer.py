@@ -213,6 +213,8 @@ class pMOELayer(torch.nn.Module):
         return y.reshape(y.size(0), y.size(1), -1)
 
     def forward(self, input: Tensor, gate_index=0, capacity_factor=None, top_k=None, a2a_ffn_overlap_degree=None, reserve_dims=1):
+        # print(f"moe layer start: input: {input.shape}\n")
+        
         if self.skip_moe:
             result_output = input
             result_output.l_aux = None
@@ -221,6 +223,9 @@ class pMOELayer(torch.nn.Module):
         original_shape, original_dtype, original_device = input.shape, input.dtype, input.device
         assert len(
             original_shape) >= 2, "Input data must be at least 2D tensor: (s)amples, .., (m)odel_dim"
+        
+        if input.dim() == 3:
+            input = input.reshape(input.size(0)*input.size(1), input.size(2)) # [B, S, D] -> [B*S, D]
 
         x = input.reshape(-1, original_shape[-reserve_dims:].numel())
         for p in self.experts.parameters():
@@ -245,6 +250,7 @@ class pMOELayer(torch.nn.Module):
         def expert_fn(input, idx):
             # return self.expert_local(expert_input, original_shape[-reserve_dims:])
             return self.experts(input, self, idx)
+        
         y = a2a_ffn_overlap_balance(input, self.gate, self.model_dim, self.hidden_dim, expert_fn=expert_fn, a2a_ffn_overlap_degree=a2a_ffn_overlap_degree,
                                     use_2dh=self.use_2dh, group=self.group, compress_name=self.compress_name,
                                     comm_name=self.comm_name)
@@ -258,6 +264,9 @@ class pMOELayer(torch.nn.Module):
 
         # print(f"moe layer done: output: {y.shape}\n")
         # y = y.view(list(original_shape)).to(original_dtype)
+        
+        # print(f"moe layer done: output: {y.shape}\n")
+        y = y.view(list(original_shape)).to(original_dtype)
 
         return y
     
@@ -451,6 +460,9 @@ class MOELayer(torch.nn.Module):
         return y.reshape(y.size(0), y.size(1), -1)
 
     def forward(self, input: Tensor, gate_index=0, capacity_factor=None, top_k=None, a2a_ffn_overlap_degree=None, reserve_dims=1):
+        
+        # print(f"moe layer start: input: {input.shape}\n")
+        
         if self.skip_moe:
             result_output = input
             result_output.l_aux = None
@@ -459,6 +471,9 @@ class MOELayer(torch.nn.Module):
         original_shape, original_dtype, original_device = input.shape, input.dtype, input.device
         assert len(
             original_shape) >= 2, "Input data must be at least 2D tensor: (s)amples, .., (m)odel_dim"
+        
+        if input.dim() == 3:
+            input = input.reshape(input.size(0)*input.size(1), input.size(2)) # [B, S, D] -> [B*S, D]
 
         x = input.reshape(-1, original_shape[-reserve_dims:].numel())
         for p in self.experts.parameters():

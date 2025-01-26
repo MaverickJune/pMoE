@@ -207,6 +207,9 @@ def a2a_ffn_overlap_balance(_input, gate, model_dim, hidden_dim, expert_fn, a2a_
     
     # Gate Dim: (1 x N)
     idx, _ = gate(_input) # 1 x 8
+    
+    # print(f"Gating result : {idx}")
+    
     size = get_world_size(group)
     assert idx.sum() == _input.shape[0]
     idx = idx.view(size, -1).sum(dim=1).contiguous()

@@ -13,6 +13,9 @@ import csv
 from moe_lib.utils import pMOEdataset, ContextManager, generate_dummy_tokens, collate_fn_batching
 from moe_lib.moe_utils import get_model_from_hf, model_wrapper_spmoe
 
+import warnings
+warnings.filterwarnings("ignore", category=UserWarning)
+
 def custom_argparser():
     parser = argparse.ArgumentParser()
 
@@ -60,20 +63,26 @@ def custom_argparser():
     
     return args
 
+
 def main():
+    # Define the logger
+    def log(msg):
+        if dist_rank == 0:
+            print(f"{msg}")
+            
     # Set the multi-gpu inference environment
     args = custom_argparser()
+    os.environ["TOKENIZERS_PARALLELISM"] = "false"
     dist.init_process_group("nccl")
 
     dist_rank, dist_world_size = dist.get_rank(), dist.get_world_size()
+    log(f"Total # of GPUs(processes): {dist_world_size}")
     args.local_rank = os.environ.get("LOCAL_RANK", 0)
-
-    def log(msg):
-        if dist_rank == 0:
-            print(f"{msg}\n")
             
     device = torch.device("cuda:%s" % args.local_rank)
+    # print(device)
     gpu_idx = dist_rank % torch.cuda.device_count()
+    # print(gpu_idx)
     
     torch.cuda.set_device(device)
     torch.set_printoptions(sci_mode=False)
@@ -152,7 +161,7 @@ def main():
                 i += 1
     else:
         custom_input_size = args.custom_input_size
-        random_input = torch.randn(custom_input_size, args.model_dim).to(gpu_idx)
+        random_input = torch.randint(10, 50, (1, custom_input_size)).to(gpu_idx)
         
         with torch.no_grad():
             for i in range(warmup):
@@ -176,6 +185,7 @@ def main():
     # Calculate the average time taken for the forward pass
     average_elapsed_time = sum(ffn_elapsed_times) / len(ffn_elapsed_times)
     log(f"Average time [pMOE] with {args.iterations}th iterations: {average_elapsed_time} ms")
+    dist.destroy_process_group()
     
 if __name__ == "__main__":
     main()
