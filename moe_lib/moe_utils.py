@@ -267,7 +267,7 @@ def load_deepseek(gpu_idx):
     return model
     
     
-def get_model_from_hf(model_name, partial=0.4, gpu_idx=-1, llama_dict=None):
+def get_model_from_hf(model_name="meta-llama/Llama-3.1-70B-Instruct", partial=0.4, gpu_idx=-1, model_dict=None):
     if model_name not in MODEL_DICT.keys():
         raise ValueError(f"Unsupported model name. Choose from {MODEL_DICT.keys()}")
     
@@ -284,12 +284,24 @@ def get_model_from_hf(model_name, partial=0.4, gpu_idx=-1, llama_dict=None):
     if hasattr(config, 'n_layer'):
         config.n_layer = int(config.n_layer * partial)
         
-    if llama_dict is not None:
-        print(f"Configuring the model with {llama_dict}")
-        config.hidden_size = int(llama_dict['d_model'])
-        config.intermediate_size = int(llama_dict['d_hidden'])
+    if model_dict is not None:
+        config.hidden_size = int(model_dict['d_model'])
+        config.intermediate_size = int(model_dict['d_hidden'])
     
     # Get the model
     model = MODEL_DICT[model_name](config).to(torch.bfloat16).to(gpu_idx)
     
+    return model
+
+from schemoe.top_utils import schmoe_moe, balance_moe
+@torch.no_grad()
+def model_wrapper_spmoe(model, moe_name='schemoe', world_size=-1, args=None):
+    for i in range(len(model.model.layers)):
+        if moe_name == "schemoe":
+            model.model.layers[i].mlp = schmoe_moe(args, world_size, model.device)
+        elif moe_name == "pmoe":
+            model.model.layers[i].mlp = balance_moe(args, world_size, model.device)
+        else:
+            raise ValueError(f"Invalid MoE name. Choose from ['schemoe', 'pmoe']")
+        
     return model

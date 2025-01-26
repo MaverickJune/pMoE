@@ -42,7 +42,7 @@ class pMOEdataset(Dataset):
         MODEL_LIST = ["transfo-xl/transfo-xl-wt103", "mistralai/Mistral-7B-v0.1", "meta-llama/Llama-3.1-70B-Instruct", "eastwind/tinymix-8x1b-chat", "deepseek-ai/deepseek-moe-16b-base"]
         assert model_name in MODEL_LIST, f"Model name should be one of {MODEL_LIST}"
         
-        DATASET_LIST = ["wikitext-2", "wikitext-103", "enwik8", "squad"]
+        DATASET_LIST = ["wikitext-2", "wikitext-103", "enwik8", "squad", "longbench"]
         assert dataset_name in DATASET_LIST, f"Dataset name should be one of {DATASET_LIST}"
         
         if dataset_name == "wikitext-2":
@@ -53,6 +53,8 @@ class pMOEdataset(Dataset):
             dataset = load_dataset("LTCB/enwik8", split="train[:10%]", trust_remote_code=True)
         elif dataset_name == "squad":
             dataset = load_dataset("rajpurkar/squad", split="train[:10%]")
+        elif dataset_name == 'longbench':
+            dataset = load_dataset("THUDM/LongBench", "2wikimqa", split="test")
         else:
             raise NotImplementedError(f"Dataset {dataset_name} is currently not supported")
         
@@ -64,6 +66,8 @@ class pMOEdataset(Dataset):
             self.text_column = "text"
         elif dataset_name == "squad":
             self.text_column = "question"
+        elif dataset_name == "longbench":
+            self.text_column = "context"
         else:
             raise NotImplementedError(f"Dataset {dataset_name} is currently not supported")
                                       
@@ -157,7 +161,11 @@ class pMOEdataset(Dataset):
     
 def collate_fn_batching(batch, tokenizer):
     # Tokenize each item in the batch without padding
+    MAX_TOKEN_LEN = 1024
     tokenized_batch = [tokenizer(text, return_tensors="pt", add_special_tokens=True, return_attention_mask=True) for text in batch]
+    
+    # Truncate sequences that are longer than the maximum token length
+    tokenized_batch = [item['input_ids'][:, MAX_TOKEN_LEN] for item in tokenized_batch if item['input_ids'].shape[1] <= MAX_TOKEN_LEN]
 
     # Find the maximum sequence length in the batch
     max_length = max(item['input_ids'].shape[1] for item in tokenized_batch)

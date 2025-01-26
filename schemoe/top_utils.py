@@ -165,7 +165,7 @@ def generate_random_tensor(n):
 
 
 from schemoe.impls import communicate as C
-def schmoe_moe(args, idx, world_size, rank, device):
+def schmoe_moe(args, world_size, device):
     hidden_size = args.hidden_size
     ffn_hidden_size = args.hidden_size
     world_size = dist.get_world_size()
@@ -203,7 +203,7 @@ def schmoe_moe(args, idx, world_size, rank, device):
     )
     return moe_ffn
 
-def balance_moe(args, idx, world_size, rank, device):
+def balance_moe(args, world_size, device):
     hidden_size = args.hidden_size
     ffn_hidden_size = args.hidden_size
     num_experts = args.num_experts

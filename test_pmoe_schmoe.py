@@ -3,10 +3,15 @@ import torch.distributed as dist
 import torch.nn as nn
 import torch
 
+from torch.utils.data import DataLoader
+
 import argparse, os, random
 import gc
 import nvtx
 import csv
+
+from moe_lib.utils import pMOEdataset, ContextManager, generate_dummy_tokens, collate_fn_batching
+from moe_lib.moe_utils import get_model_from_hf, model_wrapper_spmoe
 
 def custom_argparser():
     parser = argparse.ArgumentParser()
@@ -44,11 +49,19 @@ def custom_argparser():
     parser.add_argument("--dataset_name", type=str, default="wikitext-2")
     parser.add_argument("--custom_input_size", type=int, default=256)
     
+    # Arguments added for model control
+    parser.add_argument("--partial", type=float, default=0.1)
+    parser.add_argument("--model_name", type=str, default="meta-llama/Llama-3.1-70B-Instruct")
+    
+    # Arguments added for iteration control
+    parser.add_argument("--iterations", type=int, default=100)
+    
     args = parser.parse_args()
     
     return args
 
 def main():
+    # Set the multi-gpu inference environment
     args = custom_argparser()
     dist.init_process_group("nccl")
 
@@ -60,6 +73,8 @@ def main():
             print(f"{msg}\n")
             
     device = torch.device("cuda:%s" % args.local_rank)
+    gpu_idx = dist_rank % torch.cuda.device_count()
+    
     torch.cuda.set_device(device)
     torch.set_printoptions(sci_mode=False)
     
@@ -73,8 +88,94 @@ def main():
         torch.set_default_dtype(torch.bfloat16)
     else:
         raise Exception("Unrecognized data type specified: %s" % args.dtype)
-        
     
-
+    start_event = torch.cuda.Event(enable_timing=True)
+    end_event = torch.cuda.Event(enable_timing=True)
+    
+    
+    # Get the model from the configuration
+    model_name = args.model_name
+    model_dict = {
+        "d_model": args.model_dim,
+        "d_hidden": args.hidden_size
+    }
+    
+    log(f"Configuring model with the following parameters: {model_dict}")
+    
+    model = get_model_from_hf(model_name, partial=args.partial, gpu_idx=gpu_idx, model_dict=model_dict)
+    model = model_wrapper_spmoe(model, moe_name="pmoe", world_size=dist_world_size, args=args)
+    model.eval()
+    
+    # Run multiple forward passes for evaluation
+    ffn_elapsed_times = []
+    iterations = args.iterations
+    warmup = 10
+    
+    if args.use_dataloader:
+        dataset = pMOEdataset(dataset_name=args.dataset_name, model_name=args.model_name)
+        dataset.prune_dataset(1024)
+        dataloader = DataLoader(dataset, batch_size=1, shuffle=False, collate_fn=lambda batch: collate_fn_batching(batch, dataset.tokenizer))
+        
+        with torch.no_grad():
+            i = 0
+            for d in dataloader:
+                if i >= warmup:
+                    break
+                _tokens = d["input_ids"].to(gpu_idx)
+                attention_mask = d["attention_mask"].to(gpu_idx)
+                _ = model(_tokens)
+                i += 1
+        
+        with torch.no_grad():
+            i = 0
+            for d in dataloader:
+                if i % 10 == 0:
+                    if dist_rank == 0:
+                        log(f"processing {i}th data")
+                        
+                if iterations != -1 and i >= iterations:
+                    break
+                
+                # embedding generate
+                _tokens = d["input_ids"].to(gpu_idx)
+                attention_mask = d["attention_mask"].to(gpu_idx)
+                torch.cuda.synchronize()
+                start_event.record()
+                _ = model(_tokens)
+                end_event.record()
+                torch.cuda.synchronize()
+                
+                # save and iterate
+                ffn_elapsed_times.append(start_event.elapsed_time(end_event))
+                
+                # Increase iter count
+                i += 1
+    else:
+        custom_input_size = args.custom_input_size
+        random_input = torch.randn(custom_input_size, args.model_dim).to(gpu_idx)
+        
+        with torch.no_grad():
+            for i in range(warmup):
+                _ = model(random_input)
+        
+        with torch.no_grad():
+            for i in range(iterations):
+                if i % 10 == 0:
+                    if dist_rank == 0:
+                        log(f"processing {i}th data")
+                
+                torch.cuda.synchronize()
+                start_event.record()
+                _ = model(random_input)
+                end_event.record()
+                torch.cuda.synchronize()
+                
+                ffn_elapsed_times.append(start_event.elapsed_time(end_event))
+    
+    
+    # Calculate the average time taken for the forward pass
+    average_elapsed_time = sum(ffn_elapsed_times) / len(ffn_elapsed_times)
+    log(f"Average time [pMOE] with {args.iterations}th iterations: {average_elapsed_time} ms")
+    
 if __name__ == "__main__":
     main()
