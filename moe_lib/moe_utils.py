@@ -306,3 +306,21 @@ def model_wrapper_spmoe(model, moe_name='schemoe', world_size=-1, args=None):
             raise ValueError(f"Invalid MoE name. Choose from ['schemoe', 'pmoe']")
     # print("finished wrapping!!")
     return model
+
+@torch.no_grad()
+def model_wrapper_fmoe(model, system_config=None, args=None):
+    # Get the needed values
+    total_experts = args.num_experts
+    d_model = args.model_dim
+    d_hidden = args.hidden_size
+    top_k = args.moe_router_topk
+    world_size = system_config.get("world_size", None)
+    moe_group = system_config.get("moe_group", None)
+    gate = system_config.get("gate", "naive")
+    gpu_idx = system_config.get("gpu_idx", -1)
+    
+    for i in range(len(model.model.layers)):
+        model.model.layers[i].mlp = FMoETransformerMLP(num_expert=total_experts, d_model=d_model, d_hidden=d_hidden, top_k=top_k, 
+                                                       world_size=world_size, moe_group=moe_group, gate=gate, is_llama=True).to(torch.bfloat16).to(gpu_idx)
+        
+    return model

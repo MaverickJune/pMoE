@@ -9,6 +9,8 @@ import argparse, os, random
 import gc
 import nvtx
 import csv
+import json
+from datetime import datetime
 
 from moe_lib.utils import pMOEdataset, ContextManager, generate_dummy_tokens, collate_fn_batching
 from moe_lib.moe_utils import get_model_from_hf, model_wrapper_spmoe
@@ -58,6 +60,9 @@ def custom_argparser():
     
     # Arguments added for iteration control
     parser.add_argument("--iterations", type=int, default=100)
+    
+    # Arguments added for logging the results
+    parser.add_argument("--log_results", default=False, action="store_true")
     
     args = parser.parse_args()
     
@@ -138,13 +143,13 @@ def main():
         with torch.no_grad():
             i = 0
             for d in dataloader:
+                if iterations != -1 and i >= iterations:
+                    break
+                
                 if i % 10 == 0:
                     if dist_rank == 0:
                         log(f"processing {i}th data")
                         
-                if iterations != -1 and i >= iterations:
-                    break
-                
                 # embedding generate
                 _tokens = d["input_ids"].to(gpu_idx)
                 attention_mask = d["attention_mask"].to(gpu_idx)
@@ -181,7 +186,14 @@ def main():
                 
                 ffn_elapsed_times.append(start_event.elapsed_time(end_event))
     
-    
+    # Log the results if specified
+    if args.log_results:
+        os.makedirs("results", exist_ok=True)
+        curr_datetime = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        result_name = f"results/pmoe_schemoe_{curr_datetime}.json"
+        with open(result_name, "w") as f:
+            json.dump(ffn_elapsed_times, f, indent=4)
+            
     # Calculate the average time taken for the forward pass
     average_elapsed_time = sum(ffn_elapsed_times) / len(ffn_elapsed_times)
     log(f"Average time [pMOE] with {args.iterations}th iterations: {average_elapsed_time} ms")

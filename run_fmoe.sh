@@ -65,7 +65,7 @@ python3 -m torch.distributed.run \
   --node_rank=$node_rank \
   --master_addr='localhost' \
   --master_port=12357 \
-  -m test_pmoe_schemoe \
+  -m test_fmoe \
   --gate_path "/workspace/pMoE/p_count_selected.csv" \
   --schemoe_overlap_degree 1 \
   --iterations 10 \
