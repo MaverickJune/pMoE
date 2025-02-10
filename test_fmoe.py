@@ -162,6 +162,7 @@ def main():
     
     # Run multiple forward passes for evaluation
     ffn_elapsed_times = []
+    ffn_handled_tokens = []
     iterations = args.iterations
     warmup = 10
     
@@ -192,6 +193,8 @@ def main():
                         
                 # embedding generate
                 _tokens = d["input_ids"].to(gpu_idx)
+                assert _tokens.dim() == 2, "The input tensor should have a dimension of 2"
+                ffn_handled_tokens.append(_tokens.size(0) * _tokens.size(1)) # batch_size * seq_len
                 attention_mask = d["attention_mask"].to(gpu_idx)
                 torch.cuda.synchronize()
                 start_event.record()
@@ -231,8 +234,17 @@ def main():
         os.makedirs("results", exist_ok=True)
         curr_datetime = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         result_name = f"results/fmoe_{curr_datetime}.json"
+        # Make a new dictionary to store the results
+        final_list = []
+        n_items = len(ffn_elapsed_times)
+        for i in range(n_items):
+            result_dict = {}
+            item_list = [ffn_elapsed_times[i], ffn_handled_tokens[i], (ffn_handled_tokens[i]/ffn_elapsed_times[i])*1000] # tokens per second
+            result_dict[f"item_{i}"] = item_list
+            final_list.append(result_dict)
+            
         with open(result_name, "w") as f:
-            json.dump(ffn_elapsed_times, f, indent=4)
+            json.dump(final_list, f, indent=4)
             
     # Calculate the average time taken for the forward pass
     average_elapsed_time = sum(ffn_elapsed_times) / len(ffn_elapsed_times)
