@@ -267,7 +267,7 @@ def load_deepseek(gpu_idx):
     return model
     
 from transformers import AutoModel
-def get_model_from_hf(model_name="meta-llama/Llama-3.1-70B-Instruct", partial=0.4, gpu_idx=-1, model_dict=None, enable_cache=False):
+def get_model_from_hf(model_name="meta-llama/Llama-3.1-70B-Instruct", partial=0.4, gpu_idx=-1, model_dict=None, enable_cache=False, pad_token_id=-1):
     if model_name not in MODEL_DICT.keys():
         raise ValueError(f"Unsupported model name. Choose from {MODEL_DICT.keys()}")
     
@@ -283,6 +283,10 @@ def get_model_from_hf(model_name="meta-llama/Llama-3.1-70B-Instruct", partial=0.
         config.num_hidden_layers = int(config.num_hidden_layers * partial)
     if hasattr(config, 'n_layer'):
         config.n_layer = int(config.n_layer * partial)
+        
+    if pad_token_id != -1:
+        config.pad_token_id = pad_token_id
+        config.vocab_size = config.vocab_size + 1
         
     if model_dict is not None:
         config.hidden_size = int(model_dict['d_model'])

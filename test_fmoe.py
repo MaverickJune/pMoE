@@ -12,6 +12,8 @@ import csv
 import json
 from datetime import datetime
 
+import statistics
+
 from moe_lib.utils import pMOEdataset, ContextManager, generate_dummy_tokens, collate_fn_batching
 from moe_lib.moe_utils import get_model_from_hf, model_wrapper_fmoe
 
@@ -156,7 +158,12 @@ def main():
     
     log(f"Configuring model with the following parameters: {model_dict}")
     
-    model = get_model_from_hf(model_name, partial=args.partial, gpu_idx=gpu_idx, model_dict=model_dict)
+    if args.use_dataloader:
+        dataset = pMOEdataset(dataset_name=args.dataset_name, model_name=args.model_name)
+        dataset.prune_dataset(1024)
+        pad_token_id = dataset.tokenizer.pad_token_id
+    
+    model = get_model_from_hf(model_name, partial=args.partial, gpu_idx=gpu_idx, model_dict=model_dict, pad_token_id=pad_token_id)
     model = model_wrapper_fmoe(model, system_config=system_config, args=args)
     model.eval()
     
@@ -167,9 +174,7 @@ def main():
     warmup = 10
     
     if args.use_dataloader:
-        dataset = pMOEdataset(dataset_name=args.dataset_name, model_name=args.model_name)
-        dataset.prune_dataset(1024)
-        dataloader = DataLoader(dataset, batch_size=1, shuffle=False, collate_fn=lambda batch: collate_fn_batching(batch, dataset.tokenizer))
+        dataloader = DataLoader(dataset, batch_size=args.batch_size, shuffle=False, collate_fn=lambda batch: collate_fn_batching(batch, dataset.tokenizer))
         
         with torch.no_grad():
             i = 0
@@ -189,7 +194,7 @@ def main():
                 
                 if i % 10 == 0:
                     if rank == 0:
-                        log(f"processing {i}th data")
+                        log(f"processing {i}th batch")
                         
                 # embedding generate
                 _tokens = d["input_ids"].to(gpu_idx)
@@ -203,7 +208,7 @@ def main():
                 torch.cuda.synchronize()
                 
                 # save and iterate
-                ffn_elapsed_times.append(start_event.elapsed_time(end_event))
+                ffn_elapsed_times.append(start_event.elapsed_time(end_event) * 0.001) # ms -> s
                 
                 # Increase iter count
                 i += 1
@@ -227,7 +232,12 @@ def main():
                 end_event.record()
                 torch.cuda.synchronize()
                 
-                ffn_elapsed_times.append(start_event.elapsed_time(end_event))
+                ffn_elapsed_times.append(start_event.elapsed_time(end_event) * 0.001) # ms -> s
+                
+    # Calculate the throughput
+    ffn_throughput = []
+    for i in range(len(ffn_elapsed_times)):
+        ffn_throughput.append(ffn_handled_tokens[i] / ffn_elapsed_times[i])
     
     # Log the results if specified
     if args.log_results:
@@ -239,16 +249,18 @@ def main():
         n_items = len(ffn_elapsed_times)
         for i in range(n_items):
             result_dict = {}
-            item_list = [ffn_elapsed_times[i], ffn_handled_tokens[i], (ffn_handled_tokens[i]/ffn_elapsed_times[i])*1000] # tokens per second
+            item_list = [ffn_elapsed_times[i], ffn_handled_tokens[i], ffn_throughput[i]] # tokens per second
             result_dict[f"item_{i}"] = item_list
             final_list.append(result_dict)
+            
+        final_list.append({"batch_size": args.batch_size, "avg_tp": statistics.mean(ffn_throughput), "std_tp": statistics.stdev(ffn_throughput)})
             
         with open(result_name, "w") as f:
             json.dump(final_list, f, indent=4)
             
     # Calculate the average time taken for the forward pass
     average_elapsed_time = sum(ffn_elapsed_times) / len(ffn_elapsed_times)
-    log(f"Average time [fMOE] with {args.iterations}th iterations: {average_elapsed_time} ms")
+    log(f"Average time [fMOE] with {args.iterations}th iterations: {average_elapsed_time} s")
     dist.destroy_process_group()
     
 if __name__ == "__main__":

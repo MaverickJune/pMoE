@@ -68,6 +68,7 @@ python3 -m torch.distributed.run \
   -m test_pmoe_schemoe \
   --gate_path "/workspace/pMoE/p_count_selected.csv" \
   --schemoe_overlap_degree 1 \
-  --iterations 10 \
+  --batch_size 4 \
+  --iterations 100 \
   --use_dataloader \
   --log_results
