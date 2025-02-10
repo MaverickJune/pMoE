@@ -10,7 +10,7 @@ class MimicGate(BaseGate):
     and mimic the distribution of the expert selection.
     """
     
-    def __init__(self, d_model, num_expert, world_size, top_k=1,  gpu_idx=-1, path="/home/wjbang/workspace/pMoE/pMoE/p_count_selected.csv"):
+    def __init__(self, d_model, num_expert, world_size, top_k=1,  gpu_idx=-1, path="/workspace/pMoE/p_count_selected.csv"):
         super().__init__(num_expert, world_size)
         assert top_k == 1, "Pshave gate only supports top_k = 1"
         

@@ -9,7 +9,7 @@ import torch.nn as nn
 from .functions import prepare_forward, ensure_comm, prepare_balance_forward
 from .functions import MOEScatter, MOEGather, MoEReshape
 from .functions import AllGather, Slice
-from .gates import NaiveGate, PshaveGate
+from .gates import NaiveGate, PshaveGate, MimicGate
 
 from .fastermoe.config import switch_from_env
 
@@ -295,6 +295,7 @@ class FMoE(nn.Module):
         GATE_DICT = {
             "naive": NaiveGate,
             "pshave": PshaveGate,
+            "mimic": MimicGate
         }
         
         if gate not in GATE_DICT.keys():
@@ -305,8 +306,12 @@ class FMoE(nn.Module):
             self.gate = gate(d_model, num_expert, world_size, top_k, gate_bias=gate_bias)
         elif issubclass(gate, PshaveGate):
             self.gate = gate(d_model, num_expert, world_size, top_k, imbalance_level=imbalance_level)
+        elif issubclass(gate, MimicGate):
+            gpu_idx = int(os.environ.get("RANK", -1)) % torch.cuda.device_count()
+            self.gate = gate(d_model, num_expert, world_size, top_k, gpu_idx=gpu_idx)
         else:
-            self.gate = gate(d_model, num_expert, world_size, top_k)
+            raise ValueError(f"Gate {gate} is not supported.")
+        
         self.gate_hook = gate_hook
         self.mask = mask
         self.mask_dict = mask_dict

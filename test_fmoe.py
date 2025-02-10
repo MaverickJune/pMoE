@@ -100,6 +100,7 @@ def main():
     top_k = 1
     rank = int(os.environ["RANK"])
     world_size = int(os.environ["WORLD_SIZE"])
+    
     local_rank = int(os.environ["LOCAL_RANK"])
     # setup GPUs
     gpu_idx = rank % torch.cuda.device_count()
@@ -127,6 +128,10 @@ def main():
             
     # Set the multi-gpu inference environment
     args = custom_argparser()
+    
+    # Calibrate num experts (per GPU)
+    args.num_experts = args.num_experts // world_size
+    
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
     
     start_event = torch.cuda.Event(enable_timing=True)
@@ -146,7 +151,7 @@ def main():
         "ctx": ctx,
         "gpu_rank": gpu_rank,
         "gpu_idx": gpu_idx,
-        "gate": "naive"
+        "gate": "mimic"
     }
     
     log(f"Configuring model with the following parameters: {model_dict}")

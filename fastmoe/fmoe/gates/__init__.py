@@ -11,3 +11,4 @@ from .dc_gate import DCGate
 
 from .swipe_gate import SwipeGate
 from .pshave_gate import PshaveGate
+from .mimic_gate import MimicGate
