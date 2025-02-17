@@ -67,7 +67,7 @@ def custom_argparser():
     parser.add_argument("--log_results", default=False, action="store_true")
     
     # Arguments for decoding phase test
-    parser.add_argument("--decode", default=False, action="store_true")
+    parser.add_argument("--decode", type=int, default=-1)
     
     args = parser.parse_args()
     
@@ -166,7 +166,12 @@ def main():
                 attention_mask = d["attention_mask"].to(gpu_idx)
                 torch.cuda.synchronize()
                 start_event.record()
-                _ = model(_tokens)
+                if args.decode == -1:
+                    _ = model(_tokens)
+                else:
+                    # perform decoding
+                    decoding_step = args.decode
+                    raise NotImplementedError("Not implemented decoding yet")
                 end_event.record()
                 torch.cuda.synchronize()
                 
@@ -215,7 +220,7 @@ def main():
             item_list = [ffn_elapsed_times[i], ffn_handled_tokens[i], ffn_throughput[i]] # tokens per second
             result_dict[f"item_{i}"] = item_list
             final_list.append(result_dict)
-        final_list.append({"batch_size": args.batch_size, "avg_tp": statistics.mean(ffn_throughput), "std_tp": statistics.stdev(ffn_throughput)})
+        final_list.append({"batch_size": args.batch_size, "pipeline_stage": args.schemoe_overlap_degree, "avg_tp": statistics.mean(ffn_throughput), "std_tp": statistics.stdev(ffn_throughput)})
             
         with open(result_name, "w") as f:
             json.dump(final_list, f, indent=4)

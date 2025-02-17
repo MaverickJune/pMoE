@@ -253,7 +253,7 @@ def main():
             result_dict[f"item_{i}"] = item_list
             final_list.append(result_dict)
             
-        final_list.append({"batch_size": args.batch_size, "avg_tp": statistics.mean(ffn_throughput), "std_tp": statistics.stdev(ffn_throughput)})
+        final_list.append({"batch_size": args.batch_size, "pipeline_stage": args.schemoe_overlap_degree, "avg_tp": statistics.mean(ffn_throughput), "std_tp": statistics.stdev(ffn_throughput)})
             
         with open(result_name, "w") as f:
             json.dump(final_list, f, indent=4)
