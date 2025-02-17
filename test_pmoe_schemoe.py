@@ -237,7 +237,8 @@ def main():
             item_list = [ffn_elapsed_times[i], ffn_handled_tokens[i], ffn_throughput[i]] # tokens per second
             result_dict[f"item_{i}"] = item_list
             final_list.append(result_dict)
-        final_list.append({"batch_size": args.batch_size, "pipeline_stage": args.schemoe_overlap_degree, "avg_tp": statistics.mean(ffn_throughput), "std_tp": statistics.stdev(ffn_throughput)})
+        final_list.append({"batch_size": args.batch_size, "pipeline_stage": args.schemoe_overlap_degree, "avg_tp": statistics.mean(ffn_throughput), 
+                           "std_tp": statistics.stdev(ffn_throughput), "decoding_step": args.decode})
             
         with open(result_name, "w") as f:
             json.dump(final_list, f, indent=4)
