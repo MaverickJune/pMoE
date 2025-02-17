@@ -229,6 +229,11 @@ def generate_dummy_tokens(batch_size, seq_len):
     return torch.rand((batch_size, seq_len))
 
 
+def clear_kv(model):
+    # Clear kv cache of the given model
+    pass
+
+
 
 
 

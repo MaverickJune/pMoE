@@ -126,7 +126,13 @@ def main():
     
     log(f"Configuring model with the following parameters: {model_dict}")
     
-    model = get_model_from_hf(model_name, partial=args.partial, gpu_idx=gpu_idx, model_dict=model_dict, enable_cache=False, pad_token_id=pad_token_id)
+    # Related to decoding
+    if args.decode != -1:
+        enable_cache = True
+        if dist_rank == 0:
+            log(f"Enabled decoding step: {args.decode}")
+    
+    model = get_model_from_hf(model_name, partial=args.partial, gpu_idx=gpu_idx, model_dict=model_dict, enable_cache=enable_cache, pad_token_id=pad_token_id)
     model = model_wrapper_spmoe(model, moe_name="pmoe", world_size=dist_world_size, args=args)
     model.eval()
     
@@ -146,7 +152,7 @@ def main():
                     break
                 _tokens = d["input_ids"].to(gpu_idx)
                 attention_mask = d["attention_mask"].to(gpu_idx)
-                _ = model(_tokens)
+                _ = model(input_ids = _tokens, attention_mask = attention_mask)
                 i += 1
         
         with torch.no_grad():
@@ -167,11 +173,22 @@ def main():
                 torch.cuda.synchronize()
                 start_event.record()
                 if args.decode == -1:
-                    _ = model(_tokens)
+                    _ = model(input_ids = _tokens, attention_mask = attention_mask)
                 else:
                     # perform decoding
                     decoding_step = args.decode
-                    raise NotImplementedError("Not implemented decoding yet")
+                    past_key_values = None
+                    for iter in range(1, decoding_step+1):
+                        output = model(input_ids = _tokens, attention_mask = attention_mask, past_key_values = past_key_values)
+                        next_token_logits = output.logits[:, -1, :]
+                        past_key_values = output.past_key_values
+                        next_token = torch.argmax(next_token_logits, dim=-1)
+                        next_token = next_token.unsqueeze(1)
+                        
+                        # post processing
+                        _tokens = next_token
+                        attention_mask = torch.cat([attention_mask, torch.ones_like(next_token)], dim = -1)
+                    
                 end_event.record()
                 torch.cuda.synchronize()
                 

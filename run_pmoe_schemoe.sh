@@ -73,4 +73,5 @@ python3 -m torch.distributed.run \
   --batch_size 4 \
   --use_dataloader \
   --iterations 100 \
-  --log_results
+  --log_results \
+  --decode 10
