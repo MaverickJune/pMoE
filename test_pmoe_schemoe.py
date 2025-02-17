@@ -69,6 +69,10 @@ def custom_argparser():
     # Arguments for decoding phase test
     parser.add_argument("--decode", type=int, default=-1)
     
+    # Arguments for pshave gate 
+    parser.add_argument("--use_pshave", default=False, action="store_true") 
+    parser.add_argument("--imbalance_level", type=float, default=0.125)
+    
     args = parser.parse_args()
     
     return args
@@ -118,6 +122,8 @@ def main():
         "d_model": args.model_dim,
         "d_hidden": args.hidden_size
     }
+    
+    pad_token_id = -1
     
     if args.use_dataloader:
         dataset = pMOEdataset(dataset_name=args.dataset_name, model_name=args.model_name)
@@ -198,12 +204,15 @@ def main():
                 # Increase iter count
                 i += 1
     else:
+        if dist_rank == 0:
+            log(f"Using randomly generated input")
         custom_input_size = args.custom_input_size
-        random_input = torch.randint(10, 50, (1, custom_input_size)).to(gpu_idx)
         
         with torch.no_grad():
             for i in range(warmup):
-                _ = model(random_input)
+                _tokens = torch.randint(10, 50, (args.batch_size, custom_input_size)).to(gpu_idx)
+                attention_mask = torch.ones_like(_tokens).to(gpu_idx)
+                _ = model(input_ids = _tokens, attention_mask = attention_mask)
         
         with torch.no_grad():
             for i in range(iterations):
@@ -211,9 +220,30 @@ def main():
                     if dist_rank == 0:
                         log(f"processing {i}th data")
                 
+                _tokens = torch.randint(10, 50, (args.batch_size, custom_input_size)).to(gpu_idx)
+                attention_mask = torch.ones_like(_tokens).to(gpu_idx)
+                assert _tokens.dim() == 2, "The input tensor should have a dimension of 2"
+                ffn_handled_tokens.append(_tokens.size(0) * _tokens.size(1)) # batch_size * seq_len
+                
                 torch.cuda.synchronize()
                 start_event.record()
-                _ = model(random_input)
+                if args.decode == -1:
+                    _ = model(input_ids = _tokens, attention_mask = attention_mask)
+                else:
+                    # perform decoding
+                    decoding_step = args.decode
+                    past_key_values = None
+                    for iter in range(1, decoding_step+1):
+                        output = model(input_ids = _tokens, attention_mask = attention_mask, past_key_values = past_key_values)
+                        next_token_logits = output.logits[:, -1, :]
+                        past_key_values = output.past_key_values
+                        next_token = torch.argmax(next_token_logits, dim=-1)
+                        next_token = next_token.unsqueeze(1)
+                        
+                        # post processing
+                        _tokens = next_token
+                        attention_mask = torch.cat([attention_mask, torch.ones_like(next_token)], dim = -1)
+                        
                 end_event.record()
                 torch.cuda.synchronize()
                 

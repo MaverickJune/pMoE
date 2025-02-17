@@ -76,21 +76,67 @@ class MimicGate(BaseGate):
         n_samples = self.loaded_distribution.size(0)
         
         # Create dummy gate_top_k_val
-        gate_top_k_val = torch.zeros(n_tokens, 1, dtype=torch.bfloat16).to(x.device)
+        gate_top_k_val = torch.zeros(n_tokens, 1, dtype=torch.bfloat16, device=self.gpu_idx)
         
         # Randomly select an index from the loaded distribution
-        idx = torch.randint(n_samples, (1,)).to(x.device)
+        idx = torch.randint(n_samples, (1,), device=self.gpu_idx)
         selected_prob = self.loaded_distribution[idx].squeeze(0)
         
         # Set the token_board for each expert
         expected_tokens = n_tokens * selected_prob
-        token_board = torch.floor(expected_tokens).to(torch.long).to(x.device)
+        token_board = torch.floor(expected_tokens).to(torch.long)
         remainder = n_tokens - token_board.sum().item()
         
         # Find the bin with the maximum allocation
         max_idx = torch.argmax(token_board)
         token_board[max_idx] += remainder
         return token_board, gate_top_k_val
+    
+    
+class PshaveGate(BaseGate):
+    r"""
+    This is a gate that can control the imbalance distribution of the experts.
+    pshave = probability shave
+    """
+    
+    def __init__(self, d_model, num_expert, world_size, top_k=1, imbalance_level=0.125, gate_bias=False, gpu_idx=-1):
+        super().__init__(num_expert, world_size)
+        assert top_k == 1, "Pshave gate only supports top_k = 1"
+        
+        self.num_expert = self.tot_expert
+        self.world_size = world_size
+        self.d_model = d_model
+        self.imbalance_level = imbalance_level
+        self.gpu_idx = gpu_idx
+        
+    def shave_distribution(self, imbalance_level, num_expert):
+        p_board = torch.zeros(num_expert, device=self.gpu_idx)
+        max_idx = torch.randint(num_expert, (1,), device=self.gpu_idx).item()
+        p_board[max_idx] = imbalance_level
+        for i in range(0, num_expert):
+            if i != max_idx:
+                p_board[i] = (1 - imbalance_level) / (num_expert - 1)
+        return p_board
+    
+    def forward(self, x):
+        r"""
+        The forward function of the pshave gate.
+        """
+        n_tokens = x.size(0)
+        shaved_distribution = self.shave_distribution(self.imbalance_level, self.num_expert)
+        
+        expected_tokens = n_tokens * shaved_distribution
+        token_board = torch.floor(expected_tokens).to(torch.long)
+        remainder = n_tokens - token_board.sum().item()
+        
+        max_idx = torch.argmax(token_board)
+        token_board[max_idx] += remainder
+        
+        # Generate the gate score (trash value)
+        gate_top_k_val = torch.zeros(n_tokens, 1, dtype=torch.bfloat16, device=self.gpu_idx)
+        
+        return token_board, gate_top_k_val
+    
     
 def split_gate(tensor, n):
     if n <= 0:
@@ -182,7 +228,11 @@ def schmoe_moe(args, world_size, device):
     comm_name = args.schemoe_comm_name
     overlap_degree = args.schemoe_overlap_degree
     
-    gate = MimicGate(args.model_dim, 1, world_size, top_k=1, gpu_idx=device, path=args.gate_path)
+    gate = None
+    if args.use_pshave:
+        gate = PshaveGate(args.model_dim, 1, world_size, top_k=1, imbalance_level=args.imbalance_level, gpu_idx=device)
+    else:
+        gate = MimicGate(args.model_dim, 1, world_size, top_k=1, gpu_idx=device, path=args.gate_path)
     
     moe_ffn = moe_layer(
         gate_type={
@@ -220,7 +270,11 @@ def balance_moe(args, world_size, device):
     comm_name = args.schemoe_comm_name
     overlap_degree = args.schemoe_overlap_degree
     
-    gate = MimicGate(args.model_dim, 1, world_size, top_k=1, gpu_idx=device, path=args.gate_path)
+    gate = None
+    if args.use_pshave:
+        gate = PshaveGate(args.model_dim, 1, world_size, top_k=1, imbalance_level=args.imbalance_level, gpu_idx=device)
+    else:
+        gate = MimicGate(args.model_dim, 1, world_size, top_k=1, gpu_idx=device, path=args.gate_path)
     
     pmoe_ffn = pmoe_layer(
         gate_type={

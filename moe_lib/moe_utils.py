@@ -325,6 +325,6 @@ def model_wrapper_fmoe(model, system_config=None, args=None):
     
     for i in range(len(model.model.layers)):
         model.model.layers[i].mlp = FMoETransformerMLP(num_expert=total_experts, d_model=d_model, d_hidden=d_hidden, top_k=top_k, 
-                                                       world_size=world_size, moe_group=moe_group, gate=gate, is_llama=True).to(torch.bfloat16).to(gpu_idx)
+                                                       world_size=world_size, moe_group=moe_group, gate=gate, is_llama=True, imbalance_level=args.imbalance_level).to(torch.bfloat16).to(gpu_idx)
         
     return model
