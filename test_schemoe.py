@@ -57,7 +57,7 @@ def custom_argparser():
     parser.add_argument("--custom_input_size", type=int, default=256)
     
     # Arguments added for model control
-    parser.add_argument("--partial", type=float, default=0.1)
+    parser.add_argument("--partial", type=float, default=0.05)
     parser.add_argument("--model_name", type=str, default="meta-llama/Llama-3.1-70B-Instruct")
     
     # Arguments added for iteration control

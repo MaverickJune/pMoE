@@ -71,11 +71,11 @@ python3 -m torch.distributed.run \
   --master_port=12357 \
   -m test_schemoe \
   --gate_path "/workspace/pMoE/p_count_selected.csv" \
-  --schemoe_overlap_degree 1 \
+  --schemoe_overlap_degree 2 \
   --batch_size 4 \
   --iterations 100 \
   --log_results \
   --decode 10 \
   --use_pshave \
-  --imbalance_level 0.125 \
+  --imbalance_level 0.25 \
   # --use_dataloader

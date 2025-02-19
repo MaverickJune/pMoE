@@ -54,10 +54,10 @@ def custom_argparser():
     # Arguments added for input control
     parser.add_argument("--use_dataloader", default=False, action="store_true")
     parser.add_argument("--dataset_name", type=str, default="wikitext-2")
-    parser.add_argument("--custom_input_size", type=int, default=100)
+    parser.add_argument("--custom_input_size", type=int, default=256)
     
     # Arguments added for model control
-    parser.add_argument("--partial", type=float, default=0.1)
+    parser.add_argument("--partial", type=float, default=0.05)
     parser.add_argument("--model_name", type=str, default="meta-llama/Llama-3.1-70B-Instruct")
     
     # Arguments added for iteration control
