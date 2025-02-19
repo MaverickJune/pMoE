@@ -175,12 +175,15 @@ def main():
                 # embedding generate
                 _tokens = d["input_ids"].to(gpu_idx)
                 assert _tokens.dim() == 2, "The input tensor should have a dimension of 2"
-                ffn_handled_tokens.append(_tokens.size(0) * _tokens.size(1)) # batch_size * seq_len
+                bsz = _tokens.size(0)
+                prompt_token_len = _tokens.size(1)
+                # ffn_handled_tokens.append(_tokens.size(0) * _tokens.size(1)) # batch_size * seq_len
                 attention_mask = d["attention_mask"].to(gpu_idx)
                 torch.cuda.synchronize()
                 start_event.record()
                 if args.decode == -1:
                     _ = model(input_ids = _tokens, attention_mask = attention_mask)
+                    ffn_handled_tokens.append(bsz * prompt_token_len) # batch_size * seq_len
                 else:
                     # perform decoding
                     decoding_step = args.decode
@@ -195,6 +198,7 @@ def main():
                         # post processing
                         _tokens = next_token
                         attention_mask = torch.cat([attention_mask, torch.ones_like(next_token)], dim = -1)
+                    ffn_handled_tokens.append(bsz * (prompt_token_len+decoding_step)) # batch_size * seq_len
                     
                 end_event.record()
                 torch.cuda.synchronize()
@@ -222,14 +226,18 @@ def main():
                         log(f"processing {i}th data")
                 
                 _tokens = torch.randint(10, 50, (args.batch_size, custom_input_size)).to(gpu_idx)
+                bsz = _tokens.size(0)
+                prompt_token_len = _tokens.size(1)
+                
                 attention_mask = torch.ones_like(_tokens).to(gpu_idx)
                 assert _tokens.dim() == 2, "The input tensor should have a dimension of 2"
-                ffn_handled_tokens.append(_tokens.size(0) * _tokens.size(1)) # batch_size * seq_len
+                # ffn_handled_tokens.append(_tokens.size(0) * _tokens.size(1)) # batch_size * seq_len
                 
                 torch.cuda.synchronize()
                 start_event.record()
                 if args.decode == -1:
                     _ = model(input_ids = _tokens, attention_mask = attention_mask)
+                    ffn_handled_tokens.append(bsz * prompt_token_len) # batch_size * seq_len
                 else:
                     # perform decoding
                     decoding_step = args.decode
@@ -244,6 +252,7 @@ def main():
                         # post processing
                         _tokens = next_token
                         attention_mask = torch.cat([attention_mask, torch.ones_like(next_token)], dim = -1)
+                    ffn_handled_tokens.append(bsz * (prompt_token_len+decoding_step)) # batch_size * seq_len
                         
                 end_event.record()
                 torch.cuda.synchronize()
@@ -269,7 +278,7 @@ def main():
             result_dict[f"item_{i}"] = item_list
             final_list.append(result_dict)
         final_list.append({"batch_size": args.batch_size, "pipeline_stage": args.schemoe_overlap_degree, "avg_tp": statistics.mean(ffn_throughput), 
-                           "std_tp": statistics.stdev(ffn_throughput), "decoding_step": args.decode})
+                           "std_tp": statistics.stdev(ffn_throughput), "decoding_step": args.decode, "imbalance_level": args.imbalance_level, "use_pshave": args.use_pshave})
             
         with open(result_name, "w") as f:
             json.dump(final_list, f, indent=4)

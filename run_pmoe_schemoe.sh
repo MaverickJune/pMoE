@@ -28,7 +28,7 @@ export HF_DATASETS_VERBOSITY=warning
 # Activate the conda environment
 # source $conda_path activate $conda_env
 
-nproc_per_node=2 # GPUs
+nproc_per_node=8 # GPUs
 nnodes=${#nodes[@]}  # # nodes
 hostname=$(hostname)
 
@@ -58,7 +58,7 @@ fi
 
 echo "Running on node: $hostname with node_rank: $node_rank"
 
-export CUDA_VISIBLE_DEVICES="2,3"
+# export CUDA_VISIBLE_DEVICES="2,3"
 # CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 
 # sudo numactl --cpunodebind=0,1,2,3 --membind=0,1,2,3 
 python3 -m torch.distributed.run \
@@ -70,7 +70,7 @@ python3 -m torch.distributed.run \
   -m test_pmoe_schemoe \
   --gate_path "/workspace/pMoE/p_count_selected.csv" \
   --schemoe_overlap_degree 1 \
-  --batch_size 1 \
+  --batch_size 4 \
   --iterations 100 \
   --log_results \
   --decode 10 \
