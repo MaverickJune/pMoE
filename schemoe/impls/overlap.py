@@ -243,49 +243,25 @@ def a2a_ffn_overlap_balance(_input, gate, model_dim, hidden_dim, expert_fn, a2a_
     schemoe_custom_kernel.clear_ptr_lst()
 
     for i in range(a2a_ffn_overlap_degree):
-        # print(f"Pipeline Stage: {i}\n")
         input[i] = buffer[i].input #.clone().contiguous()
-        # print(f"input data: {input[i].size()}\n")
-        # print(f"input data ptr: {hex(input[i].data_ptr())}, device: {input[i].device} \n")
         input[i] = Compress.apply(input[i], buffer[i].buffer_1, compress_name, comm_name, buffer[i].src(), buffer[i].global_dst())
         input[i] = Comm.apply(input[i], 1)
-        # print(f"Debug 1: {i}\n")
-        # print(f"RANK: {buffer[i].rank} buffer src: {hex(buffer[i].src().data_ptr())}, buffer dst: {hex(buffer[i].global_dst().data_ptr())}\n")
     for i in range(a2a_ffn_overlap_degree):
         input[i] = Decompress.apply(input[i], compress_name, comm_name)
-        # print(f"before compute data: {input[i].size()}\n")
         input[i] = expert_fn(input[i], 0) 
-        # print(f"after compute data: {input[i].size()}\n")
-        # print(f"RANK: {buffer[i].rank} buffer src: {hex(buffer[i].src().data_ptr())}, buffer dst: {hex(buffer[i].dst().data_ptr())}\n")
         input[i] = Compress.apply(input[i], buffer[i].buffer_2, compress_name, comm_name, buffer[i].src(), buffer[i].dst())
         input[i] = Comm.apply(input[i], 2)
-        # print(f"Debug 2: {i} \n")
     for i in range(a2a_ffn_overlap_degree):
         input[i] = Decompress.apply(input[i], compress_name, comm_name)
-        # print(f"before compute2 data: {input[i].size()}\n")  
         input[i] = buffer[i].reduce(input[i])
-        input[i] = expert_fn(input[i], 1)
-        # print(f"RANK: {buffer[i].rank} Debug reduced input: {input[i].shape}, global_dst(): {hex(buffer[i].global_dst().data_ptr())} reshape_dst(): {hex(buffer[i].reshape_dst().data_ptr())}\n")
-        # print(f"RANK: {buffer[i].rank} input: {input[i].size()} output: {buffer[i].buffer_3.size()}, global_dst(): {buffer[i].global_dst()}, reshape dst: {buffer[i].reshape_dst()}\n")  #buffer src: {hex(buffer[i].src().data_ptr())}, buffer dst: {hex(buffer[i].dst().data_ptr())}\n")
-        
-        input[i] = Compress.apply(input[i], buffer[i].buffer_3, compress_name, comm_name, buffer[i].global_dst(), buffer[i].reshape_dst())
-        # print(f"Debug 3-1: {i}\n")
-        # print(f"RANK: {buffer[i].rank} Debug reduced input: {input[i].shape}, global_dst(): {hex(buffer[i].global_dst().data_ptr())} reshape_dst(): {hex(buffer[i].reshape_dst().data_ptr())}\n")
-        
+        input[i] = expert_fn(input[i], 1)     
+        input[i] = Compress.apply(input[i], buffer[i].buffer_3, compress_name, comm_name, buffer[i].global_dst(), buffer[i].reshape_dst())       
         input[i] = Comm.apply(input[i], 3)
-        # print(f"\n [{buffer[i].rank}] Debug 3-2: {i}\n")
     for i in range(a2a_ffn_overlap_degree):
         input[i] = Decompress.apply(input[i], compress_name, comm_name)
-        # print(f"Debug 4-1: {i}\n")
         input[i] = buffer[i].reduce(input[i])
-        # print(f"Debug 4-2: {i}\n")
     output = [input[i] for i in range(a2a_ffn_overlap_degree)]
     output = torch.cat(output, dim=0).contiguous()
-    # print(f"Debug 5: output shape: {output.shape}\n")
-    # for i in range(a2a_ffn_overlap_degree):
-    #     _ = Decompress.apply(buffer[i].input, compress_name, comm_name)
-    #     _ = Decompress.apply(buffer[i].input, compress_name, comm_name)
-    #     _ = Decompress.apply(buffer[i].input, compress_name, comm_name)
         
     return output
 
@@ -308,7 +284,6 @@ def a2a_ffn_overlap_forward(_input, gate, model_dim, hidden_dim, expert_fn, a2a_
     # inserted
     # print(f"sum: {idx.sum}\n, {idx}")
     # print(gidx_cpu)
-    
     gates = split_gate(gidx_cpu, a2a_ffn_overlap_degree)
     
     # gates = split_gate(gate, a2a_ffn_overlap_degree)

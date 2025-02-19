@@ -148,70 +148,7 @@ def _pmoe_general_global_forward(inp, gate, expert_fn, total_experts, layer_num,
     
     out_batch_size = tree.flatten(inp)[0].shape[0]
     outp = reduced_tensor[:out_batch_size]
-    # # out_batch_size = tree.flatten(inp)[0].shape[0]
-    # # if len(gate.shape) == 2:
-    # #     out_batch_size *= gate.shape[1]
-    
-    # # TO DO: Reshape the tensor 
-    # # x = ...
-    # # _shape = (inp.shape[0] * topk, inp.shape[1]) # [b x k, H] 
-    
-    # out_batch_size = tree.flatten(inp)[0].shape[0]
-    # if len(gate.shape) == 2:
-    #     out_batch_size *= gate.shape[1]
-
-    # def gather_func(tensor):
-    #     return MOEGather.apply(
-    #         tensor,
-    #         pos,
-    #         local_expert_count,
-    #         global_expert_count,
-    #         out_batch_size,
-    #         ctx.get_size('tp'),
-    #     )
-
-    # outp = tree.map_structure(gather_func, x)
     return outp
-    # # After Reshape: Reduce scatter 하면댐.
-    # def reduce_scatter_row(tensor, ctx):
-    #     """
-    #     Reduce-scatter the tensor from shape [b x k x n, H] to [b x k, H].
-
-    #     Args:
-    #         tensor (torch.Tensor): Input tensor of shape [b x k x n, H].
-    #         _shape (tuple): size of output (b x k, H).
-    #         rank (int): Rank of the current process.
-
-    #     Returns:
-    #         torch.Tensor: Reduced-scattered tensor of shape [b x k, H] for this process.
-    #     """
-    #     # Ensure distributed process group is initialized
-    #     assert dist.is_initialized()
-
-    #     group = ctx.get_group("tp")
-    #     world_size = ctx.get_size("tp")
-    #     rank = ctx.get_rank("tp")
-
-    #     # Validate input tensor shape
-    #     bkn, H = tensor.shape[0], tensor.shape[1]
-    #     assert bkn % world_size == 0, "Tensor must be divisible by world_size."
-        
-    #     # Compute chunk size
-    #     chunk_size = bkn // world_size  # Each chunk corresponds to [b x k]
-
-    #     # Split input tensor into chunks for reduce-scatter
-    #     input_chunks = list(tensor.chunk(world_size, dim=0))
-
-    #     # Create output tensor for this rank
-    #     output_tensor = torch.empty((chunk_size, H), dtype=tensor.dtype, device=tensor.device)
-
-    #     # Perform reduce-scatter
-    #     dist.reduce_scatter(output_tensor, input_chunks, op=dist.ReduceOp.SUM, group=group)
-
-    #     return output_tensor
-
-    # outp = tree.map_structure(lambda t: reduce_scatter_row(t, ctx), x)
-    # return outp
 
 fmoe_faster_schedule = False
 if switch_from_env('FMOE_FASTER_SCHEDULE_ENABLE', False):

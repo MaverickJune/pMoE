@@ -41,11 +41,14 @@ class PshaveGate(BaseGate):
         
         max_idx = torch.argmax(token_board)
         token_board[max_idx] += remainder
+        gate_top_k_idx = torch.arange(self.num_expert, device=x.device).repeat_interleave(token_board).to(torch.long).to(x.device)
+        gate_top_k_idx = gate_top_k_idx.unsqueeze(1) # [n_tokens, 1]
+        self.set_loss(torch.zeros(1, requires_grad=True).to(x.device))
         
         # Generate the gate score (trash value)
         gate_top_k_val = torch.zeros(n_tokens, 1, dtype=torch.bfloat16, device=self.gpu_idx)
         
-        return token_board, gate_top_k_val
+        return gate_top_k_idx, gate_top_k_val
     
 
 if __name__ == '__main__':

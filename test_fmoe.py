@@ -173,6 +173,7 @@ def main():
         pad_token_id = dataset.tokenizer.pad_token_id
         
     # Related to decoding
+    enable_cache = False
     if args.decode != -1:
         enable_cache = True
         if rank == 0:

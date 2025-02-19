@@ -24,7 +24,7 @@ export NUMEXPR_NUM_THREADS=32   # Limit NumExpr threads to 1
 export TORCH_NUM_THREADS=32     # Limit PyTorch threads to 1
 export TRANSFORMERS_VERBOSITY=warning
 export HF_DATASETS_VERBOSITY=warning
-export CUDA_LAUNCH_BLOCKING=1
+# export CUDA_LAUNCH_BLOCKING=1
 # Activate the conda environment
 # source $conda_path activate $conda_env
 
@@ -70,11 +70,10 @@ python3 -m torch.distributed.run \
   -m test_pmoe_schemoe \
   --gate_path "/workspace/pMoE/p_count_selected.csv" \
   --schemoe_overlap_degree 1 \
-  --batch_size 4 \
+  --batch_size 1 \
   --iterations 100 \
   --log_results \
   --decode 10 \
-  --use_dataloader \
-  # --use_pshave \
-  # --imbalance_level 0.125 \
+  --use_pshave \
+  --imbalance_level 0.125 \
   # --use_dataloader

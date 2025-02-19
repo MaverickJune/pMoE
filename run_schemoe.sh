@@ -17,6 +17,8 @@ export NCCL_MIN_NCHANNELS=4    # Minimum channels
 export NCCL_MAX_NCHANNELS=8    # Maximum channels
 export NCCL_ALGO=Ring          # Ring algorithm
 export NCCL_PROTO=Simple       # Simple protocol for large data
+# export NCCL_DEBUG=TRACE
+# export NCCL_DEBUG_SUBSYS=ALL
 
 export OMP_NUM_THREADS=16       # Limit OpenMP threads to 1
 export MKL_NUM_THREADS=16      # Limit MKL threads to 1
@@ -59,20 +61,21 @@ fi
 echo "Running on node: $hostname with node_rank: $node_rank"
 
 export CUDA_VISIBLE_DEVICES="2,3"
-# CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 numactl --cpunodebind=0,1,2,3 --membind=0,1,2,3 \
+# CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 
+# sudo numactl --cpunodebind=0,1,2,3 --membind=0,1,2,3 
 python3 -m torch.distributed.run \
   --nproc_per_node=$nproc_per_node \
   --nnodes=$nnodes \
   --node_rank=$node_rank \
   --master_addr='localhost' \
   --master_port=12357 \
-  -m test_fmoe \
+  -m test_schemoe \
   --gate_path "/workspace/pMoE/p_count_selected.csv" \
   --schemoe_overlap_degree 1 \
+  --batch_size 1 \
   --iterations 100 \
-  --batch_size 4 \
   --log_results \
-  --decode -1 \
+  --decode 10 \
   --use_pshave \
   --imbalance_level 0.125 \
-  # --use_dataloader \
+  # --use_dataloader

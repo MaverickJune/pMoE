@@ -133,6 +133,7 @@ def main():
     log(f"Configuring model with the following parameters: {model_dict}")
     
     # Related to decoding
+    enable_cache = False
     if args.decode != -1:
         enable_cache = True
         if dist_rank == 0:
