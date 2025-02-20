@@ -72,6 +72,7 @@ def custom_argparser():
     # Arguments for pshave gate 
     parser.add_argument("--use_pshave", default=False, action="store_true") 
     parser.add_argument("--imbalance_level", type=float, default=0.125)
+    parser.add_argument("--max_idx", type=int, default=0)
     
     args = parser.parse_args()
     
@@ -284,7 +285,7 @@ def main():
             
     # Calculate the average time taken for the forward pass
     average_elapsed_time = sum(ffn_elapsed_times) / len(ffn_elapsed_times)
-    log(f"Average time [pMOE] with {args.iterations}th iterations: {average_elapsed_time} s")
+    log(f"Average time [ScheMOE] with {args.iterations}th iterations: {average_elapsed_time} s")
     dist.destroy_process_group()
     
 if __name__ == "__main__":

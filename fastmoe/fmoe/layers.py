@@ -197,6 +197,7 @@ class FMoE(nn.Module):
         mask=None,
         mask_dict=None,
         gate_bias=False,
+        max_idx=-1
     ):
         super().__init__()
         self.num_expert = num_expert
@@ -242,7 +243,7 @@ class FMoE(nn.Module):
         if issubclass(gate, NaiveGate):
             self.gate = gate(d_model, num_expert, world_size, top_k, gate_bias=gate_bias)
         elif issubclass(gate, PshaveGate):
-            self.gate = gate(d_model, num_expert, world_size, top_k, imbalance_level=imbalance_level, gpu_idx=gpu_idx)
+            self.gate = gate(d_model, num_expert, world_size, top_k, imbalance_level=imbalance_level, gpu_idx=gpu_idx, max_idx=max_idx)
         elif issubclass(gate, MimicGate):
             gpu_idx = int(os.environ.get("RANK", -1)) % torch.cuda.device_count()
             self.gate = gate(d_model, num_expert, world_size, top_k, gpu_idx=gpu_idx)

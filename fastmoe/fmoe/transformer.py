@@ -91,13 +91,14 @@ class FMoETransformerMLP(FMoE):
         top_k=1,
         imbalance_level=0.125,
         is_llama=False,
+        max_idx=-1,
         **kwargs
     ):
         def one_expert(d_model):
             return _Expert(1, d_model, d_hidden, activation, rank=0)
         
         expert = one_expert
-        super().__init__(num_expert=num_expert, d_model=d_model, expert=expert, gate=gate, top_k=top_k, imbalance_level=imbalance_level, **kwargs)
+        super().__init__(num_expert=num_expert, d_model=d_model, expert=expert, gate=gate, top_k=top_k, imbalance_level=imbalance_level, max_idx=max_idx, **kwargs)
         self.mark_parallel_comm(expert_dp_comm)
         self.is_llama = is_llama
 

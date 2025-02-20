@@ -99,7 +99,7 @@ class PshaveGate(BaseGate):
     pshave = probability shave
     """
     
-    def __init__(self, d_model, num_expert, world_size, top_k=1, imbalance_level=0.125, gate_bias=False, gpu_idx=-1):
+    def __init__(self, d_model, num_expert, world_size, top_k=1, imbalance_level=0.125, gate_bias=False, gpu_idx=-1, max_idx=-1):
         super().__init__(num_expert, world_size)
         assert top_k == 1, "Pshave gate only supports top_k = 1"
         
@@ -108,11 +108,12 @@ class PshaveGate(BaseGate):
         self.d_model = d_model
         self.imbalance_level = imbalance_level
         self.gpu_idx = gpu_idx
+        self.max_idx = max_idx
         
     def shave_distribution(self, imbalance_level, num_expert):
         p_board = torch.zeros(num_expert, device=self.gpu_idx)
         max_idx = torch.randint(num_expert, (1,), device=self.gpu_idx).item()
-        p_board[max_idx] = imbalance_level
+        p_board[self.max_idx] = imbalance_level
         for i in range(0, num_expert):
             if i != max_idx:
                 p_board[i] = (1 - imbalance_level) / (num_expert - 1)
@@ -230,7 +231,7 @@ def schmoe_moe(args, world_size, device):
     
     gate = None
     if args.use_pshave:
-        gate = PshaveGate(args.model_dim, 1, world_size, top_k=1, imbalance_level=args.imbalance_level, gpu_idx=device)
+        gate = PshaveGate(args.model_dim, 1, world_size, top_k=1, imbalance_level=args.imbalance_level, gpu_idx=device, max_idx=args.max_idx)
     else:
         gate = MimicGate(args.model_dim, 1, world_size, top_k=1, gpu_idx=device, path=args.gate_path)
     
@@ -272,7 +273,7 @@ def balance_moe(args, world_size, device):
     
     gate = None
     if args.use_pshave:
-        gate = PshaveGate(args.model_dim, 1, world_size, top_k=1, imbalance_level=args.imbalance_level, gpu_idx=device)
+        gate = PshaveGate(args.model_dim, 1, world_size, top_k=1, imbalance_level=args.imbalance_level, gpu_idx=device, max_idx=args.max_idx)
     else:
         gate = MimicGate(args.model_dim, 1, world_size, top_k=1, gpu_idx=device, path=args.gate_path)
     

@@ -72,6 +72,7 @@ def custom_argparser():
     # Arguments for pshave gate 
     parser.add_argument("--use_pshave", default=False, action="store_true") 
     parser.add_argument("--imbalance_level", type=float, default=0.125)
+    parser.add_argument("--max_idx", type=int, default=0)
     
     args = parser.parse_args()
     

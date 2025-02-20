@@ -75,4 +75,5 @@ python3 -m torch.distributed.run \
   --decode 10 \
   --use_pshave \
   --imbalance_level 0.25 \
+  --max_idx 1 \
   # --use_dataloader \
